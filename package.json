@@ -1,0 +1,24 @@
+{
+  "name": "handy-diffusion",
+  "version": "1.0.0",
+  "description": "algorithms to simulate diffusion",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CritalMediumBlue/diffusionForBacteria.git"
+  },
+  "keywords": [
+    "diffusion",
+    "ADI",
+    "Crank-Nicolson"
+  ],
+  "author": "Ricardo",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/CritalMediumBlue/diffusionForBacteria/issues"
+  },
+  "homepage": "https://github.com/CritalMediumBlue/diffusionForBacteria#readme"
+}
