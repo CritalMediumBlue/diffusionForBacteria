@@ -45,7 +45,7 @@ export const setADIProperties = (
 
 export const updateSinksAndSources = (sinks, sources) => {
     for (let i = 0; i < WIDTH * HEIGHT; i++) {
-        gamma[i] = (sinks[i] * halfDeltaT) / 4;
+        gamma[i] = (sinks[i] * halfDeltaT) / 2;
         scaledSources[i] = sources[i] * halfDeltaT;
     }
 }
