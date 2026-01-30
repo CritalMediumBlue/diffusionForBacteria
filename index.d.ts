@@ -9,7 +9,6 @@
  * @param diffusionCoefficient - Diffusion coefficient
  * @param deltaX - Spatial step size
  * @param deltaT - Time step size
- * @param decayRate - Decay rate constant (default: 0)
  */
 export function setADIProperties(
     width: number,
@@ -17,7 +16,6 @@ export function setADIProperties(
     diffusionCoefficient: number,
     deltaX: number,
     deltaT: number,
-    decayRate?: number
 ): void;
 
 /**
@@ -116,3 +114,7 @@ export function thomasAlgorithm(
     c: Float64Array | number[],
     d: Float64Array | number[]
 ): Float64Array;    
+
+export function updateSinksAndSources(
+    sinks: Float64Array | number[],
+    sources: Float64Array | number[]): void;

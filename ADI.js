@@ -17,7 +17,6 @@ export const setADIProperties = (
     diffusionCoefficient,
     deltaX,
     deltaT,
-    decayRates = 0
 ) => {
     WIDTH = width;
     HEIGHT = height;
@@ -74,15 +73,10 @@ const updateMainDiagonalYstep = (xCoord) => {
 
 export const ADI = (
     concentrationData,
-    sources,
     totalNumberOfIterations,
     allowNegativeValues = false
 ) => {
     let reachedNegativeValue = false;
-
-    for (let idx = 0; idx < WIDTH * HEIGHT; idx++) {
-        scaledSources[idx] = sources[idx] * halfDeltaT;
-    }
 
     const currentConcentrationData = concentrationData;
 
