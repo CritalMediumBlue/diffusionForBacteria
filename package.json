@@ -1,6 +1,6 @@
 {
   "name": "handy-diffusion",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "algorithms to simulate diffusion",
   "main": "index.js",
   "types": "index.d.ts",

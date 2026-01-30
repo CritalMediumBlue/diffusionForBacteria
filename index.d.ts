@@ -21,13 +21,11 @@ export function setADIProperties(
 /**
  * Solve 2D diffusion equation using ADI method
  * @param concentrationData - Concentration array (width * height)
- * @param sources - Source terms array
  * @param totalNumberOfIterations - Number of time steps
  * @param allowNegativeValues - Whether to allow negative concentrations (default: false)
  */
 export function ADI(
     concentrationData: Float64Array | number[],
-    sources: Float64Array | number[],
     totalNumberOfIterations: number,
     allowNegativeValues?: boolean
 ): void;
