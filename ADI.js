@@ -8,7 +8,8 @@ let modifiedUpperDiagonal2, modifiedRightHandSide2, solution2;
 let intermediateConcentration;
 let a1, b1, c1, d1;
 let a2, b2, c2, d2;
-let alpha, halfDeltaT, oneMinus2AlphaMinusGamma, scaledSources;
+let alpha, halfDeltaT, scaledSources;
+let gamma;
 
 export const setADIProperties = (
     width,
@@ -16,7 +17,7 @@ export const setADIProperties = (
     diffusionCoefficient,
     deltaX,
     deltaT,
-    decayRate = 0
+    decayRates = 0
 ) => {
     WIDTH = width;
     HEIGHT = height;
@@ -38,10 +39,38 @@ export const setADIProperties = (
         d2,
         alpha,
         halfDeltaT,
-        oneMinus2AlphaMinusGamma,
         scaledSources,
-    } = initADIArrays(WIDTH, HEIGHT, diffusionCoefficient, deltaX, deltaT, decayRate));
+        gamma,
+    } = initADIArrays(WIDTH, HEIGHT, diffusionCoefficient, deltaX, deltaT));
 };
+
+export const updateSinksAndSources = (sinks, sources) => {
+    for (let i = 0; i < WIDTH * HEIGHT; i++) {
+        gamma[i] = (sinks[i] * halfDeltaT) / 4;
+        scaledSources[i] = sources[i] * halfDeltaT;
+    }
+}
+const updateMainDiagonalXstep = (yCoord) => {
+    //update b1
+    for (let i = 0; i < WIDTH; i++) {
+        const idx = yCoord * WIDTH + i;
+        b1[i] = 1 + 2 * alpha + gamma[idx];
+    }
+    //boundary conditions
+    b1[0] = 1 + alpha + gamma[yCoord * WIDTH + 0];
+    b1[WIDTH - 1] = 1 + alpha + gamma[yCoord * WIDTH + (WIDTH - 1)];
+}
+
+const updateMainDiagonalYstep = (xCoord) => {
+    //update b2
+    for (let j = 0; j < HEIGHT; j++) {
+        const idx = j * WIDTH + xCoord;
+        b2[j] = 1 + 2 * alpha + gamma[idx];
+    }
+    //boundary conditions
+    b2[0] = 1 + alpha + gamma[0 * WIDTH + xCoord];
+    b2[HEIGHT - 1] = 1 + alpha + gamma[(HEIGHT - 1) * WIDTH + xCoord];
+}
 
 export const ADI = (
     concentrationData,
@@ -72,10 +101,11 @@ export const ADI = (
 
                 d1[i] =
                     alpha * bottom +
-                    oneMinus2AlphaMinusGamma * center +
+                    (1 - 2 * alpha - gamma[idx]) * center +
                     alpha * top +
                     scaledSources[idx];
             }
+            updateMainDiagonalXstep(j);
 
             thomasAlgorithm(
                 a1,
@@ -104,7 +134,7 @@ export const ADI = (
 
             d1[i] =
                 alpha * bottom +
-                oneMinus2AlphaMinusGamma * center +
+                (1 - 2 * alpha - gamma[idx]) * center +
                 alpha * top +
                 scaledSources[idx];
         }
@@ -133,7 +163,7 @@ export const ADI = (
 
             d1[i] =
                 alpha * bottom +
-                oneMinus2AlphaMinusGamma * center +
+                (1 - 2 * alpha - gamma[idx]) * center +
                 alpha * top +
                 scaledSources[idx];
         }
@@ -165,11 +195,11 @@ export const ADI = (
 
                 d2[j] =
                     alpha * left +
-                    oneMinus2AlphaMinusGamma * center +
+                    (1 - 2 * alpha - gamma[idx]) * center +
                     alpha * right +
                     scaledSources[idx];
             }
-
+            updateMainDiagonalYstep(i);
             thomasAlgorithm(
                 a2,
                 b2,
@@ -201,7 +231,7 @@ export const ADI = (
 
             d2[j] =
                 alpha * left +
-                oneMinus2AlphaMinusGamma * center +
+                (1 - 2 * alpha - gamma[idx]) * center +
                 alpha * right +
                 scaledSources[idx];
         }
@@ -234,7 +264,7 @@ export const ADI = (
 
             d2[j] =
                 alpha * left +
-                oneMinus2AlphaMinusGamma * center +
+                (1 - 2 * alpha - gamma[idx]) * center +
                 alpha * right +
                 scaledSources[idx];
         }

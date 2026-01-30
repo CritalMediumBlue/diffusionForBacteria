@@ -101,3 +101,18 @@ export function efectiveInfluence(
     lambda: number,
     scale: number
 ): Float64Array;
+
+/**
+ * Solve tridiagonal system using Thomas algorithm
+ * @param a - Sub-diagonal coefficients
+ * @param b - Main diagonal coefficients
+ * @param c - Super-diagonal coefficients
+ * @param d - Right-hand side values
+ * @returns Solution array
+ */
+export function thomasAlgorithm(
+    a: Float64Array | number[],
+    b: Float64Array | number[],
+    c: Float64Array | number[],
+    d: Float64Array | number[]
+): Float64Array;    

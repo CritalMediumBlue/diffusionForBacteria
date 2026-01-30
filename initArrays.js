@@ -12,7 +12,7 @@ const generateDiagonals = (length, alpha, gamma) => {
     return { lowerDiagonal, mainDiagonal, upperDiagonal, rightHandSide };
 };
 
-export const initADIArrays = (WIDTH, HEIGHT, DIFFUSION_RATE, deltaX, deltaT, decayRate) => {
+export const initADIArrays = (WIDTH, HEIGHT, DIFFUSION_RATE, deltaX, deltaT) => {
     const modifiedUpperDiagonal1 = new Float64Array(WIDTH);
     const modifiedRightHandSide1 = new Float64Array(WIDTH);
     const solution1 = new Float64Array(WIDTH);
@@ -21,23 +21,23 @@ export const initADIArrays = (WIDTH, HEIGHT, DIFFUSION_RATE, deltaX, deltaT, dec
     const solution2 = new Float64Array(HEIGHT);
     const intermediateConcentration = new Float64Array(WIDTH * HEIGHT);
     const scaledSources = new Float64Array(WIDTH * HEIGHT);
+    const gamma = new Float64Array(WIDTH * HEIGHT).fill(0);
 
     const alpha = (DIFFUSION_RATE * deltaT) / (2 * deltaX * deltaX);
-    const gamma = (decayRate * deltaT) / 4;
+    const gammaPoint = 0;
     const {
         lowerDiagonal: a1,
         mainDiagonal: b1,
         upperDiagonal: c1,
         rightHandSide: d1,
-    } = generateDiagonals(WIDTH, alpha, gamma);
+    } = generateDiagonals(WIDTH, alpha, gammaPoint);
     const {
         lowerDiagonal: a2,
         mainDiagonal: b2,
         upperDiagonal: c2,
         rightHandSide: d2,
-    } = generateDiagonals(HEIGHT, alpha, gamma);
+    } = generateDiagonals(HEIGHT, alpha, gammaPoint);
     const halfDeltaT = deltaT / 2;
-    const oneMinus2AlphaMinusGamma = 1 - 2 * alpha - gamma;
     return {
         modifiedUpperDiagonal1,
         modifiedRightHandSide1,
@@ -56,8 +56,8 @@ export const initADIArrays = (WIDTH, HEIGHT, DIFFUSION_RATE, deltaX, deltaT, dec
         d2,
         alpha,
         halfDeltaT,
-        oneMinus2AlphaMinusGamma,
         scaledSources,
-        deltaT,
+        gamma,
     };
 };
+
