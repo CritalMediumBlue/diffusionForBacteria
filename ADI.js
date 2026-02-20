@@ -81,17 +81,21 @@ export const ADI = (
     const currentConcentrationData = concentrationData;
 
     for (let iteration = 0; iteration < totalNumberOfIterations; iteration++) {
-        /////////////-----  FIRST HALF-STEP  -----/////////////
-
-        // INTERIOR POINTS
-        for (let j = 1; j < HEIGHT - 1; j++) {
+        /////////////-----  FIRST HALF-STEP (X-sweep)  -----/////////////
+        // Solve implicitly in x, explicitly in y.
+        // Clamped indexing implements Neumann (zero-flux) BCs in y:
+        //   jBelow = max(j-1, 0),  jAbove = min(j+1, HEIGHT-1)
+        for (let j = 0; j < HEIGHT; j++) {
+            const jBelow = j > 0 ? j - 1 : 0;
+            const jAbove = j < HEIGHT - 1 ? j + 1 : HEIGHT - 1;
             const rowOffset = j * WIDTH;
+
             for (let i = 0; i < WIDTH; i++) {
                 const idx = rowOffset + i;
 
                 const center = currentConcentrationData[idx];
-                const bottom = currentConcentrationData[(j - 1) * WIDTH + i];
-                const top = currentConcentrationData[(j + 1) * WIDTH + i];
+                const bottom = currentConcentrationData[jBelow * WIDTH + i];
+                const top = currentConcentrationData[jAbove * WIDTH + i];
 
                 d1[i] =
                     alpha * bottom +
@@ -117,75 +121,21 @@ export const ADI = (
             }
         }
 
-        // BOTTOM POINTS j = 0
-        const rowOffsetBot = 0 * WIDTH;
+        /////////////-----  SECOND HALF-STEP (Y-sweep)  -----/////////////
+        // Solve implicitly in y, explicitly in x.
+        // Clamped indexing implements Neumann (zero-flux) BCs in x:
+        //   iLeft = max(i-1, 0),  iRight = min(i+1, WIDTH-1)
         for (let i = 0; i < WIDTH; i++) {
-            const idx = rowOffsetBot + i;
+            const iLeft = i > 0 ? i - 1 : 0;
+            const iRight = i < WIDTH - 1 ? i + 1 : WIDTH - 1;
 
-            const center = currentConcentrationData[idx];
-            const bottom = center;
-            const top = currentConcentrationData[1 * WIDTH + i];
-
-            d1[i] =
-                alpha * bottom +
-                (1 - 2 * alpha - gamma[idx]) * center +
-                alpha * top +
-                scaledSources[idx];
-        }
-        thomasAlgorithm(
-            a1,
-            b1,
-            c1,
-            d1,
-            WIDTH,
-            modifiedUpperDiagonal1,
-            modifiedRightHandSide1,
-            solution1
-        );
-        for (let i = 0; i < WIDTH; i++) {
-            intermediateConcentration[rowOffsetBot + i] = solution1[i];
-        }
-
-        // TOP POINTS j = HEIGHT-1
-        const rowOffsetTop = (HEIGHT - 1) * WIDTH;
-        for (let i = 0; i < WIDTH; i++) {
-            const idx = rowOffsetTop + i;
-
-            const center = currentConcentrationData[idx];
-            const bottom = currentConcentrationData[(HEIGHT - 2) * WIDTH + i];
-            const top = center;
-
-            d1[i] =
-                alpha * bottom +
-                (1 - 2 * alpha - gamma[idx]) * center +
-                alpha * top +
-                scaledSources[idx];
-        }
-        thomasAlgorithm(
-            a1,
-            b1,
-            c1,
-            d1,
-            WIDTH,
-            modifiedUpperDiagonal1,
-            modifiedRightHandSide1,
-            solution1
-        );
-        for (let i = 0; i < WIDTH; i++) {
-            intermediateConcentration[rowOffsetTop + i] = solution1[i];
-        }
-
-        /////////////-----  SECOND HALF-STEP  -----/////////////
-        // INTERIOR POINTS
-        for (let i = 1; i < WIDTH - 1; i++) {
             for (let j = 0; j < HEIGHT; j++) {
                 const rowOffset = j * WIDTH;
                 const idx = rowOffset + i;
 
                 const center = intermediateConcentration[idx];
-        const right = intermediateConcentration[rowOffset + (i + 1)];
-        const left = intermediateConcentration[rowOffset + (i - 1)];
-
+                const left = intermediateConcentration[rowOffset + iLeft];
+                const right = intermediateConcentration[rowOffset + iRight];
 
                 d2[j] =
                     alpha * left +
@@ -194,6 +144,7 @@ export const ADI = (
                     scaledSources[idx];
             }
             updateMainDiagonalYstep(i);
+
             thomasAlgorithm(
                 a2,
                 b2,
@@ -212,71 +163,6 @@ export const ADI = (
                 }
                 currentConcentrationData[pos] = solution2[j];
             }
-        }
-
-        // LEFT POINTS i = 0
-        for (let j = 0; j < HEIGHT; j++) {
-            const rowOffset = j * WIDTH;
-            const idx = rowOffset;
-
-            const center = intermediateConcentration[idx];
-            const right = intermediateConcentration[j * WIDTH + 1];
-            const left = center;
-
-            d2[j] =
-                alpha * left +
-                (1 - 2 * alpha - gamma[idx]) * center +
-                alpha * right +
-                scaledSources[idx];
-        }
-        thomasAlgorithm(
-            a2,
-            b2,
-            c2,
-            d2,
-            HEIGHT,
-            modifiedUpperDiagonal2,
-            modifiedRightHandSide2,
-            solution2
-        );
-
-        for (let j = 0; j < HEIGHT; j++) {
-            if (solution2[j] < 0) {
-                reachedNegativeValue = true;
-            }
-            currentConcentrationData[j * WIDTH] = solution2[j];
-        }
-
-        // RIGHT POINTS i = WIDTH-1
-        for (let j = 0; j < HEIGHT; j++) {
-            const rowOffset = j * WIDTH;
-            const idx = rowOffset + (WIDTH - 1);
-
-            const center = intermediateConcentration[idx];
-            const right = center;
-            const left = intermediateConcentration[j * WIDTH + (WIDTH - 2)];
-
-            d2[j] =
-                alpha * left +
-                (1 - 2 * alpha - gamma[idx]) * center +
-                alpha * right +
-                scaledSources[idx];
-        }
-        thomasAlgorithm(
-            a2,
-            b2,
-            c2,
-            d2,
-            HEIGHT,
-            modifiedUpperDiagonal2,
-            modifiedRightHandSide2,
-            solution2
-        );
-        for (let j = 0; j < HEIGHT; j++) {
-            if (solution2[j] < 0) {
-                reachedNegativeValue = true;
-            }
-            currentConcentrationData[j * WIDTH + (WIDTH - 1)] = solution2[j];
         }
     }
 
