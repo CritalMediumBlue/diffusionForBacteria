@@ -1,5 +1,5 @@
 import Plotly from 'plotly.js-dist';
-import { ADI, setADIProperties, analyticSteadyState, efectiveInfluence } from "handy-diffusion";
+import { ADI, setADIProperties, analyticSteadyState, efectiveInfluence, updateSinksAndSources } from "handy-diffusion";
 import { checkForSteadyState, convertTo2D, calculateDifference } from '../helpers.js';
 
 
@@ -25,13 +25,15 @@ for (let i = 0; i < height; i++) {
 }
 
 // calculate numerical solution using ADI
-setADIProperties(width, height, diffusionCoefficient, deltaX, deltaT, decayRate);
+setADIProperties(width, height, diffusionCoefficient, deltaX, deltaT);
+const sinks = new Float64Array(width * height).fill(decayRate);
+updateSinksAndSources(sinks, sources);
 let steadyStateReached = false;
 const adiSolution = new Float64Array(width * height).fill(0);
 let previousADISolution = new Float64Array(width * height).fill(0);
 
 while (!steadyStateReached) {
-	ADI(adiSolution, sources, 20, true);
+	ADI(adiSolution, 20, true);
 	steadyStateReached = checkForSteadyState(previousADISolution, adiSolution);
 	previousADISolution.set(adiSolution);
 }
