@@ -1,0 +1,26 @@
+{
+"source": {
+  "include": [
+    "ADI.js",
+    "analyticSolution.js",
+    "bessel.js",
+    "CrankNicolson.js",
+    "effective.js",
+    "helpers.js",
+    "initArrays.js",
+    "thomasAlgorithm.js",
+    "index.js"
+  ],
+  "excludePattern": "(test|spec)\\.js$"
+},
+  "opts": {
+    "destination": "./docs",
+    "recurse": true,
+    "readme": "README.md"
+  },
+  "plugins": [],
+  "templates": {
+    "cleverLinks": false,
+    "monospaceLinks": false
+  }
+}
