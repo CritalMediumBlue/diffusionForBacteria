@@ -19,7 +19,6 @@
     "src/analyticSolution.js",
     "src/crankNicolson.js",
     "src/effective.js",
-    "src/helpers.js",
     "src/initArrays.js",
     "src/thomasAlgorithm.js",
     "README.md",

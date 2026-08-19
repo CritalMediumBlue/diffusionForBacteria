@@ -3,7 +3,7 @@ import {
 } from "handy-diffusion";
 import { describe, test, expect } from "vitest";
 import { checkForSteadyState, calculateDifference } from "./src/helpers.js";
-import { mulberry32 } from "./src/random.js";
+import { mulberry32 } from "./random.js";
 
 const sourcesTestCases = [{ description: "infrequent sources", probability: 0.001 },
 { description: "dense sources", probability: 0.030 }

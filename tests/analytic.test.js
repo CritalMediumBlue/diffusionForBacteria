@@ -1,7 +1,7 @@
 import { ADI, setADIProperties, analyticSteadyState, updateSinksAndSources } from "handy-diffusion";
 import { describe, test, expect } from "vitest";
 import { checkForSteadyState, createRandomSources, calculateDifference } from "./src/helpers.js";
-import { mulberry32 } from "./src/random.js";
+import { mulberry32 } from "./random.js";
 
 const sourcesTestCases = [{ description: "infrequent sources", probability: 0.0003 },
 { description: "dense sources", probability: 0.05 }

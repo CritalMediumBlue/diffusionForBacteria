@@ -1,7 +1,7 @@
 import { ADI, setADIProperties, updateSinksAndSources } from "handy-diffusion";
 import { describe, test, expect } from "vitest";
 import { checkForSteadyState } from "./src/helpers.js";
-import { mulberry32 } from "./src/random.js";
+import { mulberry32 } from "./random.js";
 
 // ---------------------------------------------------------------------------
 // Physical domain is constant across all resolutions:

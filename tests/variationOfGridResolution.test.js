@@ -1,7 +1,7 @@
 import { ADI, setADIProperties, analyticSteadyState, updateSinksAndSources } from "handy-diffusion";
 import { describe, test, expect } from "vitest";
 import { checkForSteadyState, createRandomSources, calculateDifference } from "./src/helpers.js";
-import { mulberry32 } from "./src/random.js";
+import { mulberry32 } from "./random.js";
 
 const TestCases = [
 	{ diffusionCoefficient: 100, deltaX: 1, width: 100, height: 60, decayRate: 0.01, deltaT: 0.50 },
