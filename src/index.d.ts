@@ -57,7 +57,7 @@ export function CrankNicolson(
 	concentrationData: Float64Array | number[],
 	sources: Float64Array | number[],
 	totalNumberOfIterations: number,
-	allowNegativeValues?: boolean
+	allowNegativeValues?: boolean,
 ): void;
 
 /**
