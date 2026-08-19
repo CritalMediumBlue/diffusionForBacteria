@@ -1,28 +1,27 @@
 {
   "name": "handy-diffusion",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "algorithms to simulate diffusion",
   "type": "module",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "import": "./index.js",
-      "default": "./index.js"
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js",
+      "default": "./src/index.js"
     }
   },
   "files": [
-    "index.js",
-    "index.d.ts",
-    "adi.js",
-    "analyticSolution.js",
-    "bessel.js",
-    "crankNicolson.js",
-    "effective.js",
-    "helpers.js",
-    "initArrays.js",
-    "thomasAlgorithm.js",
+    "src/index.js",
+    "src/index.d.ts",
+    "src/adi.js",
+    "src/analyticSolution.js",
+    "src/crankNicolson.js",
+    "src/effective.js",
+    "src/helpers.js",
+    "src/initArrays.js",
+    "src/thomasAlgorithm.js",
     "README.md",
     "LICENSE"
   ],
@@ -56,9 +55,6 @@
     "url": "https://github.com/CritalMediumBlue/diffusionForBacteria/issues"
   },
   "homepage": "https://github.com/CritalMediumBlue/diffusionForBacteria#readme",
-  "dependencies": {
-    "bessel": "^1.0.2"
-  },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@vitest/coverage-v8": "^4.0.16",

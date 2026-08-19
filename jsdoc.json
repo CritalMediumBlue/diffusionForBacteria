@@ -3,7 +3,6 @@
   "include": [
     "adi.js",
     "analyticSolution.js",
-    "bessel.js",
     "crankNicolson.js",
     "effective.js",
     "helpers.js",

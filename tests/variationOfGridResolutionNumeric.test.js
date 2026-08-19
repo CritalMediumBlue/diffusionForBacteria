@@ -1,6 +1,6 @@
 import { ADI, setADIProperties, updateSinksAndSources } from "handy-diffusion";
 import { describe, test, expect } from "vitest";
-import { checkForSteadyState } from "./helpers.js";
+import { checkForSteadyState } from "./src/helpers.js";
 
 // ---------------------------------------------------------------------------
 // Physical domain is constant across all resolutions:

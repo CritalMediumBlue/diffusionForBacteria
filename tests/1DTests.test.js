@@ -3,7 +3,7 @@ import {
 	effectiveInfluence, CrankNicolson, setCNProperties
 } from "handy-diffusion";
 import { describe, test, expect } from "vitest";
-import { checkForSteadyState, calculateDifference } from "./helpers.js";
+import { checkForSteadyState, calculateDifference } from "./src/helpers.js";
 
 const sourcesTestCases = [{ description: "infrequent sources", probability: 0.001 },
 { description: "dense sources", probability: 0.030 }

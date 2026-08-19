@@ -1,6 +1,6 @@
 import { ADI, setADIProperties, analyticSteadyState, updateSinksAndSources } from "handy-diffusion";
 import { describe, test, expect } from "vitest";
-import { checkForSteadyState, createRandomSources } from "./helpers.js";
+import { checkForSteadyState, createRandomSources } from "./src/helpers.js";
 
 const sourcesTestCases = [{ description: "very weak sources", strength: 0.001 },
 { description: " strong sources", strength: 5.0 },

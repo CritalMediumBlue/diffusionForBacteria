@@ -1,5 +1,5 @@
 import { ADI, setADIProperties, CrankNicolson, setCNProperties, updateSinksAndSources } from "handy-diffusion";
-import { calculateDifference } from "./helpers.js";
+import { calculateDifference } from "./src/helpers.js";
 import { expect, test } from "vitest";
 
 const length = 1200;
