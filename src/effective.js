@@ -2,19 +2,6 @@
 export const effectiveInfluence = (width, height, sources, lambda, scale) => {
 	const effectiveInfluenceArray = new Float64Array(width * height).fill(0);
 
-	// Precompute active sources once
-	const activeSources = [];
-	for (let idx = 0; idx < sources.length; idx++) {
-		if (sources[idx] !== 0) {
-			activeSources.push({
-				idx,
-				x: (idx % width) + 0.5,
-				y: Math.floor(idx / width) + 0.5,
-				strength: sources[idx]
-			});
-		}
-	}
-
 	// Distance cutoff: beyond 5*lambda, exp(-5) ≈ 0.007 (negligible)
 	const cutoffDistance = lambda * 5;
 	const cutoffDistanceSq = cutoffDistance * cutoffDistance;
