@@ -1,6 +1,6 @@
 import Plotly from 'plotly.js-dist';
 import { ADI, setADIProperties, analyticSteadyState, efectiveInfluence, updateSinksAndSources } from "handy-diffusion";
-import { createRandomSources, checkForSteadyState, convertTo2D, calculateDifference } from './helpers.js';
+import { createRandomSources, checkForSteadyState, convertTo2D, calculateDifference } from '../helpers.js';
 
 
 const width = 100;
