@@ -10,6 +10,17 @@ for (let j = 0; j < height; j++) {
 return sources;
 }
 
+export const createRandomSinks = (width, height, probability) => {
+    const sinks = new Float64Array(width * height);
+    for (let j = 0; j < height; j++) {
+        for (let i = 0; i < width; i++) {
+            const idx = j * width + i;
+            sinks[idx] = Math.random() < probability ? 0.01 : 0.0; // example sink strength
+        }
+    }
+    return sinks;
+};
+
 export const checkForSteadyState = (prev, current, tolerance = 1e-5) => {
     let maxDiff = 0;
     for (let i = 0; i < prev.length; i++) {
