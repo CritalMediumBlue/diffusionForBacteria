@@ -1,5 +1,5 @@
 /**
- * Type definitions for handy-diffusion
+ * Type definitions for handy-diffusion (corrected to match actual implementations)
  */
 
 /**
@@ -27,8 +27,8 @@ export function setADIProperties(
 export function ADI(
 	concentrationData: Float64Array | number[],
 	totalNumberOfIterations: number,
-	allowNegativeValues?: boolean
-): void;
+	allowNegativeValues?: boolean,
+): Float64Array | null;
 
 /**
  * Set properties for the Crank-Nicolson method (1D)
@@ -78,7 +78,7 @@ export function analyticSteadyState(
 	DECAY_RATE: number,
 	deltaX: number,
 	sources: Float64Array | number[],
-	maxMode: number
+	maxMode: number,
 ): Float64Array;
 
 /**
@@ -95,7 +95,7 @@ export function effectiveInfluence(
 	height: number,
 	sources: Float64Array | number[],
 	lambda: number,
-	scale: number
+	scale: number,
 ): Float64Array;
 
 /**
@@ -103,16 +103,24 @@ export function effectiveInfluence(
  * @param a - Sub-diagonal coefficients
  * @param b - Main diagonal coefficients
  * @param c - Super-diagonal coefficients
- * @param d - Right-hand side values
- * @returns Solution array
+ * @param d - Right-hand side vector
+ * @param n - System size
+ * @param modifiedUpperDiagonal - Pre-allocated work array
+ * @param modifiedRightHandSide - Pre-allocated work array
+ * @param solution - Pre-allocated output array (written in place)
  */
 export function thomasAlgorithm(
-	a: Float64Array | number[],
-	b: Float64Array | number[],
-	c: Float64Array | number[],
-	d: Float64Array | number[]
-): Float64Array;
+	lowerDiagonal: Float64Array | number[],
+	mainDiagonal: Float64Array | number[],
+	upperDiagonal: Float64Array | number[],
+	rightHandSide: Float64Array | number[],
+	n: number,
+	modifiedUpperDiagonal: Float64Array | number[],
+	modifiedRightHandSide: Float64Array | number[],
+	solution: Float64Array | number[],
+): void;
 
 export function updateSinksAndSources(
 	sinks: Float64Array | number[],
-	sources: Float64Array | number[]): void;
+	sources: Float64Array | number[],
+): void;
