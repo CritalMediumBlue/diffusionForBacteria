@@ -1,14 +1,14 @@
 // Import and re-export ADI functions
-export { ADI, setADIProperties , updateSinksAndSources} from './ADI.js';
+export { ADI, setADIProperties, updateSinksAndSources } from './adi.js';
 
 // Import and re-export Crank-Nicolson functions
-export { CrankNicolson, setCNProperties } from './CrankNicolson.js';
+export { CrankNicolson, setCNProperties } from './crankNicolson.js';
 
 // Import and re-export analytic solution
 export { analyticSteadyState } from './analyticSolution.js';
 
 // Import and re-export effective influence
-export { efectiveInfluence } from './effective.js';
+export { effectiveInfluence } from './effective.js';
 
 // Import and re-export thomas algorithm
 export { thomasAlgorithm } from './thomasAlgorithm.js';

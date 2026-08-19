@@ -1,5 +1,5 @@
 import Plotly from 'plotly.js-dist';
-import { ADI, setADIProperties, analyticSteadyState, efectiveInfluence, updateSinksAndSources } from "handy-diffusion";
+import { ADI, setADIProperties, analyticSteadyState, effectiveInfluence, updateSinksAndSources } from "handy-diffusion";
 import { checkForSteadyState, convertTo2D, calculateDifference } from '../helpers.js';
 
 
@@ -78,7 +78,7 @@ for (let i = 0; i <= 8; i++) {
 
 const lambda = 8.25;
 const scale = 99.425;
-const effectiveSolution = efectiveInfluence(width, height, sources, lambda, scale);
+const effectiveSolution = effectiveInfluence(width, height, sources, lambda, scale);
 //const effectiveSolution = effective1DInfluence(width, height);
 
 const differenceEffectiveAnalytic = calculateDifference(effectiveSolution, analyticSolution);
@@ -99,7 +99,7 @@ for (let i = 0; i < diffEffAnalyIgnoringSources.length; i++) {
 const allRmsErrors = new Float64Array(lambdaValues.length * scaleValues.length);
 for (let i = 0; i < lambdaValues.length; i++) {
 	for (let j = 0; j < scaleValues.length; j++) {
-		const effectiveSolution = efectiveInfluence(width, height, sources, lambdaValues[i], scaleValues[j]);
+		const effectiveSolution = effectiveInfluence(width, height, sources, lambdaValues[i], scaleValues[j]);
 		let sumSquares = 0;
 		const differences = calculateDifference(averageResult, effectiveSolution);
 		for (let k = 0; k < differences.length; k++) {

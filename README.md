@@ -34,7 +34,7 @@ import {
   CrankNicolson,
   setCNProperties,
   analyticSteadyState,
-  efectiveInfluence,
+  effectiveInfluence,
   thomasAlgorithm,
 } from "handy-diffusion";
 ```
@@ -151,7 +151,7 @@ const scale = 1.0;
 
 sources[15 * width + 15] = 1.0;
 
-const influence = efectiveInfluence(width, height, sources, lambda, scale);
+const influence = effectiveInfluence(width, height, sources, lambda, scale);
 ```
 
 The result is a `Float64Array` of the same size as the grid.
@@ -230,7 +230,7 @@ Computes the analytic steady-state concentration for a rectangular domain using 
 
 Returns a `Float64Array` of the steady-state concentration.
 
-### `efectiveInfluence(width, height, sources, lambda, scale)`
+### `effectiveInfluence(width, height, sources, lambda, scale)`
 
 Calculates the effective influence of sources using an exponential kernel.
 

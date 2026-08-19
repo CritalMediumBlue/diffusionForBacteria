@@ -11,11 +11,11 @@
  * @param deltaT - Time step size
  */
 export function setADIProperties(
-    width: number,
-    height: number,
-    diffusionCoefficient: number,
-    deltaX: number,
-    deltaT: number,
+	width: number,
+	height: number,
+	diffusionCoefficient: number,
+	deltaX: number,
+	deltaT: number,
 ): void;
 
 /**
@@ -25,9 +25,9 @@ export function setADIProperties(
  * @param allowNegativeValues - Whether to allow negative concentrations (default: false)
  */
 export function ADI(
-    concentrationData: Float64Array | number[],
-    totalNumberOfIterations: number,
-    allowNegativeValues?: boolean
+	concentrationData: Float64Array | number[],
+	totalNumberOfIterations: number,
+	allowNegativeValues?: boolean
 ): void;
 
 /**
@@ -39,11 +39,11 @@ export function ADI(
  * @param decayRate - Decay rate constant (default: 0)
  */
 export function setCNProperties(
-    length: number,
-    diffusionCoefficient: number,
-    deltaX: number,
-    deltaT: number,
-    decayRate?: number
+	length: number,
+	diffusionCoefficient: number,
+	deltaX: number,
+	deltaT: number,
+	decayRate?: number
 ): void;
 
 /**
@@ -54,10 +54,10 @@ export function setCNProperties(
  * @param allowNegativeValues - Whether to allow negative concentrations (default: false)
  */
 export function CrankNicolson(
-    concentrationData: Float64Array | number[],
-    sources: Float64Array | number[],
-    totalNumberOfIterations: number,
-    allowNegativeValues?: boolean
+	concentrationData: Float64Array | number[],
+	sources: Float64Array | number[],
+	totalNumberOfIterations: number,
+	allowNegativeValues?: boolean
 ): void;
 
 /**
@@ -72,13 +72,13 @@ export function CrankNicolson(
  * @returns Steady-state concentration array
  */
 export function analyticSteadyState(
-    WIDTH: number,
-    HEIGHT: number,
-    DIFFUSION_RATE: number,
-    DECAY_RATE: number,
-    deltaX: number,
-    sources: Float64Array | number[],
-    maxMode: number
+	WIDTH: number,
+	HEIGHT: number,
+	DIFFUSION_RATE: number,
+	DECAY_RATE: number,
+	deltaX: number,
+	sources: Float64Array | number[],
+	maxMode: number
 ): Float64Array;
 
 /**
@@ -90,12 +90,12 @@ export function analyticSteadyState(
  * @param scale - Scaling factor
  * @returns Effective influence array
  */
-export function efectiveInfluence(
-    width: number,
-    height: number,
-    sources: Float64Array | number[],
-    lambda: number,
-    scale: number
+export function effectiveInfluence(
+	width: number,
+	height: number,
+	sources: Float64Array | number[],
+	lambda: number,
+	scale: number
 ): Float64Array;
 
 /**
@@ -107,12 +107,12 @@ export function efectiveInfluence(
  * @returns Solution array
  */
 export function thomasAlgorithm(
-    a: Float64Array | number[],
-    b: Float64Array | number[],
-    c: Float64Array | number[],
-    d: Float64Array | number[]
-): Float64Array;    
+	a: Float64Array | number[],
+	b: Float64Array | number[],
+	c: Float64Array | number[],
+	d: Float64Array | number[]
+): Float64Array;
 
 export function updateSinksAndSources(
-    sinks: Float64Array | number[],
-    sources: Float64Array | number[]): void;
+	sinks: Float64Array | number[],
+	sources: Float64Array | number[]): void;

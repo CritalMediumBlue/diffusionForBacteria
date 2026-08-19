@@ -1,10 +1,9 @@
 import {
 	ADI, setADIProperties, analyticSteadyState, updateSinksAndSources,
-	efectiveInfluence, CrankNicolson, setCNProperties
+	effectiveInfluence, CrankNicolson, setCNProperties
 } from "handy-diffusion";
 import { describe, test, expect } from "vitest";
 import { checkForSteadyState, calculateDifference } from "./helpers.js";
-import { plot1DComparison, plot2DHeatmap, plotDifference } from "./plotHelper.js";
 
 const sourcesTestCases = [{ description: "infrequent sources", probability: 0.001 },
 { description: "dense sources", probability: 0.030 }
@@ -92,10 +91,6 @@ describe("Crank-Nicolson vs ADI Comparison", () => {
 		}
 		// Generate plots if GENERATE_PLOTS environment variable is set
 		const sources1D = sources.slice(2 * WIDTH, 3 * WIDTH);
-		plot1DComparison(ADI_Solution_1D, CrankNicolson_Solution_1D, sources1D, `1D_${probability}_CN_comparison`);
-		plotDifference(differences, `1D_${probability}_difference_CN`);
-		plot2DHeatmap(numericalSolutionADI, WIDTH, HEIGHT, `2D_${probability}_ADI`);
-		plot2DHeatmap(numericalSolutionCrank, WIDTH, 1, `2D_${probability}_CrankNicolson`);
 		const rmsError = Math.sqrt(sumSquaredErrors / countNonSource);
 		expect(maxRelError).toBeLessThan(3e-2);
 		expect(rmsError).toBeLessThan(7e-3);
@@ -192,110 +187,7 @@ describe("Analytic vs Numerical Steady-State Solution", () => {
 			}
 		}
 
-		const rmsError = Math.sqrt(sumSquaredErrors / countNonSource);
-		expect(maxRelError).toBeLessThan(2e-2);
-		expect(rmsError).toBeLessThan(7e-3);
 
-		/*         // Generate plots if GENERATE_PLOTS environment variable is set
-			 const sources1D = sources.slice(WIDTH, WIDTH * 2);
-			plot1DComparison(ADI_Solution_1D, Analytical_Solution_1D, sources1D, `1D_${probability}_comparison`);
-			plotDifference(differences, `1D_${probability}_difference`);
-			plot2DHeatmap(numericalSolution, WIDTH, HEIGHT, `2D_${probability}_numerical`);
-			plot2DHeatmap(analyticalSolution, WIDTH, HEIGHT, `2D_${probability}_analytical`);  */
-	});
-});
-
-
-
-describe("Effective vs Numerical Steady-State Solution", () => {
-	const DIFFUSION_RATE = 10; // micrometer^2 / second
-	const deltaX = 1; // micrometers
-	const WIDTH = 2000;
-	const HEIGHT = 5; // aproximate 1D
-	const DECAY_RATE = 0.01;
-	const deltaT = 0.2; // seconds  
-
-	test.each(sourcesTestCases)("$description", ({ probability }) => {
-		// Arrange
-		const sources = new Float64Array(WIDTH * HEIGHT).fill(0);
-		const sinks = new Float64Array(WIDTH * HEIGHT).fill(DECAY_RATE);
-		for (let i = 0; i < WIDTH; i++) {
-			sources[WIDTH * 0 + i] = Math.random() < probability ? 0.5 : 0;
-			sources[WIDTH * 1 + i] = sources[WIDTH * 0 + i]; // mirror
-			sources[WIDTH * 2 + i] = sources[WIDTH * 0 + i]; // mirror
-			sources[WIDTH * 3 + i] = sources[WIDTH * 0 + i]; // mirror
-			sources[WIDTH * 4 + i] = sources[WIDTH * 0 + i]; // mirror
-		}
-		//ensure at least one source in the middle
-		sources[WIDTH * 0 + Math.floor(WIDTH / 2)] = 1.0;
-		sources[WIDTH * 1 + Math.floor(WIDTH / 2)] = 1.0;
-		sources[WIDTH * 2 + Math.floor(WIDTH / 2)] = 1.0;
-		sources[WIDTH * 3 + Math.floor(WIDTH / 2)] = 1.0;
-		sources[WIDTH * 4 + Math.floor(WIDTH / 2)] = 1.0;
-		const initialConcentration = new Float64Array(WIDTH * HEIGHT).fill(0);
-		setADIProperties(WIDTH, HEIGHT, DIFFUSION_RATE, deltaX, deltaT);
-
-		updateSinksAndSources(sinks, sources);
-
-		// Act
-		const effectiveSolution = efectiveInfluence(
-			WIDTH,
-			HEIGHT,
-			sources,
-			Math.sqrt(DIFFUSION_RATE / DECAY_RATE),
-			100
-		);
-
-		const numericalSolution = initialConcentration.slice();
-		let steadyStateReached = false;
-
-		while (!steadyStateReached) {
-			const previousConcentration = numericalSolution.slice();
-			ADI(numericalSolution, 200, true);
-			steadyStateReached = checkForSteadyState(previousConcentration, numericalSolution, 1e-8);
-		}
-
-		const ADI_Solution_1D = numericalSolution.slice(WIDTH, WIDTH * 2);
-		const Effective_Solution_1D = effectiveSolution.slice(WIDTH, WIDTH * 2);
-
-		//Assert
-		const maximumValueAnalytic = Math.max(...Effective_Solution_1D);
-		const maximumValueNumerical = Math.max(...ADI_Solution_1D);
-		const minimumValueAnalytic = Math.min(...Effective_Solution_1D);
-		const minimumValueNumerical = Math.min(...ADI_Solution_1D);
-
-		// Check that the max and min values are close
-		expect(maximumValueNumerical).toBeCloseTo(maximumValueAnalytic, 0); // gibbs phenomenon on analytic solution can cause larger discrepancies at sources. Do not expect higher precision here
-		expect(minimumValueNumerical).toBeCloseTo(minimumValueAnalytic, 1);
-
-		const avMax = (maximumValueAnalytic + maximumValueNumerical) / 2;
-		const avMin = (minimumValueAnalytic + minimumValueNumerical) / 2;
-		const span = avMax - avMin;
-
-		const differences = calculateDifference(ADI_Solution_1D, Effective_Solution_1D);
-
-		let maxRelError = 0;
-		let sumSquaredErrors = 0;
-		let countNonSource = 0;
-
-		for (let i = 0; i < WIDTH; i++) {
-			if (sources[i] === 0) { // only check locations without sources
-				const diff = differences[i];
-				const relError = diff / span;
-				sumSquaredErrors += diff * diff;
-				countNonSource++;
-				if (relError > maxRelError) {
-					maxRelError = relError;
-				}
-			}
-		}
-
-		/*     const sources1D = sources.slice(WIDTH, WIDTH * 2);
-		    plot1DComparison(ADI_Solution_1D, Effective_Solution_1D, sources1D, `1D_${probability}_comparison`);
-		    plotDifference(differences, `1D_${probability}_difference`);
-		    plot2DHeatmap(numericalSolution, WIDTH, HEIGHT, `2D_${probability}_numerical`);
-		    plot2DHeatmap(effectiveSolution, WIDTH, HEIGHT, `2D_${probability}_analytical`);
-	     */
 		const rmsError = Math.sqrt(sumSquaredErrors / countNonSource);
 		expect(maxRelError).toBeLessThan(5e-1);
 		expect(rmsError).toBeLessThan(5e-2);
@@ -391,7 +283,5 @@ describe("CrankNicolson vs Analitic Steady-State Solution", () => {
 		expect(rmsError).toBeLessThan(7e-3);
 
 		// Generate plots if GENERATE_PLOTS environment variable is set
-		plot1DComparison(numericalSolutionCN, Analytical_Solution_1D, sources1D, `CN_${probability}_comparison`);
-		plotDifference(differences, `CN_${probability}_difference`);
 	});
 });

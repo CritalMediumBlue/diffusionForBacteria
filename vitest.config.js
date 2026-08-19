@@ -7,7 +7,6 @@ export default defineConfig({
 		passWithNoTests: true,
 		pool: 'threads',
 		singleThread: false,
-		setupFiles: ['./tests/setup.js'],
 		coverage: {
 			provider: 'v8',
 			reporter: ['text', 'json', 'html'],
@@ -17,7 +16,6 @@ export default defineConfig({
 				'docs/**',
 				'**/*.test.js',
 				'vitest.config.js',
-				'test-plots/**'
 			],
 			all: false
 		},

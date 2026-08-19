@@ -1,7 +1,6 @@
 import { ADI, setADIProperties, CrankNicolson, setCNProperties, updateSinksAndSources } from "handy-diffusion";
 import { calculateDifference } from "./helpers.js";
 import { expect, test } from "vitest";
-import { plot1DComparison, plotDifference, plot2DHeatmap } from "./plotHelper.js";
 
 const length = 1200;
 const height = 3;
@@ -56,10 +55,6 @@ testCases.forEach(({ diffusionCoefficient, decayRate, deltaX, totalTime }) => {
 			numericalSolutionUsingCrankNicolson
 		);
 
-		plot1DComparison(numericalSolutionUsingADI.slice(length, 2 * length), numericalSolutionUsingCrankNicolson, sources1D, `1D_${diffusionCoefficient}_${decayRate}_${deltaX}_${totalTime}_CN_comparison`);
-		plotDifference(differences, `1D_${diffusionCoefficient}_${decayRate}_${deltaX}_${totalTime}_difference_CN`);
-		plot2DHeatmap(numericalSolutionUsingADI, length, height, `2D_${diffusionCoefficient}_${decayRate}_${deltaX}_${totalTime}_ADI`);
-		plot2DHeatmap(numericalSolutionUsingCrankNicolson, length, 1, `2D_${diffusionCoefficient}_${decayRate}_${deltaX}_${totalTime}_CrankNicolson`);
 
 		for (let i = 0; i < length; i++) {
 			const valueADI = numericalSolutionUsingADI[i + length]; // middle row

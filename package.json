@@ -15,10 +15,10 @@
   "files": [
     "index.js",
     "index.d.ts",
-    "ADI.js",
+    "adi.js",
     "analyticSolution.js",
     "bessel.js",
-    "CrankNicolson.js",
+    "crankNicolson.js",
     "effective.js",
     "helpers.js",
     "initArrays.js",

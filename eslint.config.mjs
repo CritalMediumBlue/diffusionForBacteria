@@ -8,7 +8,6 @@ export default [
 			'node_modules/**',
 			'coverage/**',
 			'docs/**',
-			'test-plots/**'
 		]
 	},
 	{
