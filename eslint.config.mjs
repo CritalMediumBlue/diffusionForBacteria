@@ -44,5 +44,19 @@ export default [
 			'no-unused-vars': 'warn',
 			'no-undef': 'error'
 		}
+	},
+	{
+		files: ['plotting/**/*.js', 'plottingarticle2D/**/*.js'],
+		languageOptions: {
+			ecmaVersion: 2022,
+			sourceType: 'module',
+			globals: {
+				...globals.browser
+			}
+		},
+		rules: {
+			'no-unused-vars': 'warn',
+			'no-undef': 'error'
+		}
 	}
 ];
