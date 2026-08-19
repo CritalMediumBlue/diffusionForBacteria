@@ -1,6 +1,7 @@
 import { ADI, setADIProperties, analyticSteadyState, updateSinksAndSources } from "handy-diffusion";
 import { describe, test, expect } from "vitest";
 import { checkForSteadyState, createRandomSources } from "./src/helpers.js";
+import { mulberry32 } from "./src/random.js";
 
 const sourcesTestCases = [{ description: "very weak sources", strength: 0.001 },
 { description: " strong sources", strength: 5.0 },
@@ -17,7 +18,8 @@ describe("Analytic vs Numerical Steady-State Solution", () => {
 
 	test.each(sourcesTestCases)("$description", ({ strength }) => {
 		// Arrange
-		const sources = createRandomSources(WIDTH, HEIGHT, 0.01);
+		const rng = mulberry32(42);
+		const sources = createRandomSources(WIDTH, HEIGHT, 0.01, rng);
 		for (let i = 0; i < sources.length; i++) {
 			sources[i] *= strength;
 		}

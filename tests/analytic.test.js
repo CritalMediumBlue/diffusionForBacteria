@@ -1,6 +1,7 @@
 import { ADI, setADIProperties, analyticSteadyState, updateSinksAndSources } from "handy-diffusion";
 import { describe, test, expect } from "vitest";
 import { checkForSteadyState, createRandomSources, calculateDifference } from "./src/helpers.js";
+import { mulberry32 } from "./src/random.js";
 
 const sourcesTestCases = [{ description: "infrequent sources", probability: 0.0003 },
 { description: "dense sources", probability: 0.05 }
@@ -17,7 +18,8 @@ describe("Analytic vs Numerical Steady-State Solution", () => {
 
 	test.each(sourcesTestCases)("$description", ({ probability }) => {
 		// Arrange
-		const sources = createRandomSources(WIDTH, HEIGHT, probability);
+		const rng = mulberry32(42);
+		const sources = createRandomSources(WIDTH, HEIGHT, probability, rng);
 		const sinks = new Float64Array(WIDTH * HEIGHT).fill(DECAY_RATE);
 		sources[Math.floor(HEIGHT / 2) * WIDTH + Math.floor(WIDTH / 2)] = 1.0; // ensure at least one source in the center
 		const initialConcentration = new Float64Array(WIDTH * HEIGHT).fill(0);

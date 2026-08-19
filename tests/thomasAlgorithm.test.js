@@ -1,5 +1,6 @@
 import { thomasAlgorithm } from "handy-diffusion";
 import { describe, test, expect } from "vitest";
+import { mulberry32 } from "./src/random.js";
 
 // Helper function to create diffusion-type tridiagonal system
 const createDiagonals = (matrixSize, alpha) => {
@@ -414,11 +415,12 @@ describe("Thomas Algorithm", () => {
             const n = 10000;
             const alpha = 3;
             const { lowerDiagonal, mainDiagonal, upperDiagonal } = createDiagonals(n, alpha);
+            const rng = mulberry32(123);
 
             // Create known solution using sine wave with random component
             const knownSolution = new Float64Array(n);
             for (let i = 0; i < n; i++) {
-                knownSolution[i] = 1e6 * (Math.random() - 0.5);
+                knownSolution[i] = 1e6 * (rng() - 0.5);
             }
 
             const rightHandSide = calculateRightHandSide(
@@ -455,12 +457,13 @@ describe("Thomas Algorithm", () => {
             const n = 100000;
             const alpha = 1e-10;
             const { lowerDiagonal, mainDiagonal, upperDiagonal } = createDiagonals(n, alpha);
+            const rng = mulberry32(123);
 
             // Create known solution using sine wave with random component
             const knownSolution = new Float64Array(n);
             for (let i = 0; i < n; i++) {
                 knownSolution[i] =
-                    1e6 * (Math.random() - 0.5) + Math.sin((i * 2 * Math.PI) / (n - 1));
+                    1e6 * (rng() - 0.5) + Math.sin((i * 2 * Math.PI) / (n - 1));
             }
 
             const rightHandSide = calculateRightHandSide(
@@ -496,12 +499,13 @@ describe("Thomas Algorithm", () => {
             const n = 100000;
             const alpha = 1e10;
             const { lowerDiagonal, mainDiagonal, upperDiagonal } = createDiagonals(n, alpha);
+            const rng = mulberry32(123);
 
             // Create known solution using sine wave with random component
             const knownSolution = new Float64Array(n);
             for (let i = 0; i < n; i++) {
                 knownSolution[i] =
-                    1e-9 * (Math.random() - 0.5 + Math.sin((i * 2 * Math.PI) / (n - 1)));
+                    1e-9 * (rng() - 0.5 + Math.sin((i * 2 * Math.PI) / (n - 1)));
             }
 
             const rightHandSide = calculateRightHandSide(
@@ -537,12 +541,13 @@ describe("Thomas Algorithm", () => {
             const n = 100000;
             const alpha = 1e15;
             const { lowerDiagonal, mainDiagonal, upperDiagonal } = createDiagonals(n, alpha);
+            const rng = mulberry32(123);
 
             // Create known solution using sine wave with random component
             const knownSolution = new Float64Array(n);
             for (let i = 0; i < n; i++) {
                 knownSolution[i] =
-                    1e-9 * (Math.random() - 0.5 + Math.sin((i * 2 * Math.PI) / (n - 1)));
+                    1e-9 * (rng() - 0.5 + Math.sin((i * 2 * Math.PI) / (n - 1)));
             }
 
             const rightHandSide = calculateRightHandSide(
@@ -578,12 +583,13 @@ describe("Thomas Algorithm", () => {
             const n = 100000;
             const alpha = 1e-15;
             const { lowerDiagonal, mainDiagonal, upperDiagonal } = createDiagonals(n, alpha);
+            const rng = mulberry32(123);
 
             // Create known solution using sine wave with random component
             const knownSolution = new Float64Array(n);
             for (let i = 0; i < n; i++) {
                 knownSolution[i] =
-                    1e6 * (Math.random() - 0.5 + Math.sin((i * 2 * Math.PI) / (n - 1)));
+                    1e6 * (rng() - 0.5 + Math.sin((i * 2 * Math.PI) / (n - 1)));
             }
 
             const rightHandSide = calculateRightHandSide(

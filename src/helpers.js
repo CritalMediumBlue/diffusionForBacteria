@@ -1,21 +1,21 @@
 
-export const createRandomSources = (width, height, probability) => {
+export const createRandomSources = (width, height, probability, rng = Math.random) => {
 const sources = new Float64Array(width * height);
 for (let j = 0; j < height; j++) {
     for (let i = 0; i < width; i++) {
         const idx = j * width + i;
-        sources[idx] = Math.random() < probability ? 1.0 : 0.0;
+        sources[idx] = rng() < probability ? 1.0 : 0.0;
     }
 }
 return sources;
 }
 
-export const createRandomSinks = (width, height, probability) => {
+export const createRandomSinks = (width, height, probability, rng = Math.random) => {
     const sinks = new Float64Array(width * height);
     for (let j = 0; j < height; j++) {
         for (let i = 0; i < width; i++) {
             const idx = j * width + i;
-            sinks[idx] = Math.random() < probability ? 0.01 : 0.0; // example sink strength
+            sinks[idx] = rng() < probability ? 0.01 : 0.0; // example sink strength
         }
     }
     return sinks;

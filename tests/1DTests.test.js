@@ -4,6 +4,7 @@ import {
 } from "handy-diffusion";
 import { describe, test, expect } from "vitest";
 import { checkForSteadyState, calculateDifference } from "./src/helpers.js";
+import { mulberry32 } from "./src/random.js";
 
 const sourcesTestCases = [{ description: "infrequent sources", probability: 0.001 },
 { description: "dense sources", probability: 0.030 }
@@ -19,9 +20,10 @@ describe("Crank-Nicolson vs ADI Comparison", () => {
 
 	test.each(sourcesTestCases)("$description", ({ probability }) => {
 		// Arrange 
+		const rng = mulberry32(42);
 		const sources = new Float64Array(WIDTH * HEIGHT).fill(0);
 		for (let i = 0; i < WIDTH; i++) {
-			sources[WIDTH * 0 + i] = Math.random() < probability ? 0.5 : 0;
+			sources[WIDTH * 0 + i] = rng() < probability ? 0.5 : 0;
 			sources[WIDTH * 1 + i] = sources[WIDTH * 0 + i]; // mirror
 			sources[WIDTH * 2 + i] = sources[WIDTH * 0 + i]; // mirror
 			sources[WIDTH * 3 + i] = sources[WIDTH * 0 + i]; // mirror
@@ -111,10 +113,11 @@ describe("Analytic vs Numerical Steady-State Solution", () => {
 
 	test.each(sourcesTestCases)("$description", ({ probability }) => {
 		// Arrange
+		const rng = mulberry32(42);
 		const sources = new Float64Array(WIDTH * HEIGHT).fill(0);
 		const sinks = new Float64Array(WIDTH * HEIGHT).fill(DECAY_RATE);
 		for (let i = 0; i < WIDTH; i++) {
-			sources[WIDTH * 0 + i] = Math.random() < probability ? 0.5 : 0;
+			sources[WIDTH * 0 + i] = rng() < probability ? 0.5 : 0;
 			sources[WIDTH * 1 + i] = sources[WIDTH * 0 + i]; // mirror
 			sources[WIDTH * 2 + i] = sources[WIDTH * 0 + i]; // mirror
 			sources[WIDTH * 3 + i] = sources[WIDTH * 0 + i]; // mirror
@@ -207,9 +210,10 @@ describe("CrankNicolson vs Analitic Steady-State Solution", () => {
 
 	test.each(sourcesTestCases)("$description", ({ probability }) => {
 		// Arrange - Create 1D sources
+		const rng = mulberry32(42);
 		const sources1D = new Float64Array(WIDTH).fill(0);
 		for (let i = 0; i < WIDTH; i++) {
-			sources1D[i] = Math.random() < probability ? 0.5 : 0;
+			sources1D[i] = rng() < probability ? 0.5 : 0;
 		}
 		// Ensure at least one source in the middle
 		sources1D[Math.floor(WIDTH / 2)] = 1.0;

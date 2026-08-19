@@ -1,6 +1,7 @@
 import { ADI, setADIProperties, analyticSteadyState, updateSinksAndSources } from "handy-diffusion";
 import { describe, test, expect } from "vitest";
 import { checkForSteadyState, createRandomSources, calculateDifference } from "./src/helpers.js";
+import { mulberry32 } from "./src/random.js";
 
 const TestCases = [
 	{ diffusionCoefficient: 100, deltaX: 1, width: 100, height: 60, decayRate: 0.01, deltaT: 0.50 },
@@ -12,7 +13,8 @@ const TestCases = [
 describe("Analytic vs Numerical Steady-State Solution with Varying Dimensions", () => {
 	test.each(TestCases)("Diffusion: $diffusionCoefficient, deltaX: $deltaX, Width: $width, Height: $height, Decay: $decayRate, deltaT: $deltaT", ({ diffusionCoefficient, deltaX, width: WIDTH, height: HEIGHT, decayRate, deltaT }) => {
 		// Arrange
-		const sources = createRandomSources(WIDTH, HEIGHT, 0.02);
+		const rng = mulberry32(42);
+		const sources = createRandomSources(WIDTH, HEIGHT, 0.02, rng);
 		const sinks = new Float64Array(WIDTH * HEIGHT).fill(decayRate);
 		sources[Math.floor(HEIGHT / 2) * WIDTH + Math.floor(WIDTH / 2)] = 1.0; // ensure at least one source in the center
 		const initialConcentration = new Float64Array(WIDTH * HEIGHT).fill(0);
