@@ -1,6 +1,5 @@
 import {
-	ADI, setADIProperties, analyticSteadyState, updateSinksAndSources,
-	effectiveInfluence, CrankNicolson, setCNProperties
+	ADI, setADIProperties, analyticSteadyState, updateSinksAndSources, CrankNicolson, setCNProperties
 } from "handy-diffusion";
 import { describe, test, expect } from "vitest";
 import { checkForSteadyState, calculateDifference } from "./src/helpers.js";
@@ -92,7 +91,6 @@ describe("Crank-Nicolson vs ADI Comparison", () => {
 			}
 		}
 		// Generate plots if GENERATE_PLOTS environment variable is set
-		const sources1D = sources.slice(2 * WIDTH, 3 * WIDTH);
 		const rmsError = Math.sqrt(sumSquaredErrors / countNonSource);
 		expect(maxRelError).toBeLessThan(3e-2);
 		expect(rmsError).toBeLessThan(7e-3);

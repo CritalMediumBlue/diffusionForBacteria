@@ -1,5 +1,4 @@
 import { ADI, setADIProperties, CrankNicolson, setCNProperties, updateSinksAndSources } from "handy-diffusion";
-import { calculateDifference } from "./src/helpers.js";
 import { expect, test } from "vitest";
 
 const length = 1200;
@@ -49,10 +48,6 @@ testCases.forEach(({ diffusionCoefficient, decayRate, deltaX, totalTime }) => {
 			sources1D,
 			totalIterations,
 			true
-		);
-		const differences = calculateDifference(
-			numericalSolutionUsingADI.slice(length, 2 * length),
-			numericalSolutionUsingCrankNicolson
 		);
 
 
