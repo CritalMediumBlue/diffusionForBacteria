@@ -291,4 +291,4 @@ npm run docs
 
 ## License
 
-ISC
+MIT
