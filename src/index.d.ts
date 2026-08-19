@@ -25,7 +25,7 @@ export function setADIProperties(
  * @param allowNegativeValues - Whether to allow negative concentrations (default: false)
  */
 export function ADI(
-	concentrationData: Float64Array | number[],
+	concentrationData: Float64Array,
 	totalNumberOfIterations: number,
 	allowNegativeValues?: boolean,
 ): Float64Array | null;
@@ -54,8 +54,8 @@ export function setCNProperties(
  * @param allowNegativeValues - Whether to allow negative concentrations (default: false)
  */
 export function CrankNicolson(
-	concentrationData: Float64Array | number[],
-	sources: Float64Array | number[],
+	concentrationData: Float64Array,
+	sources: Float64Array,
 	totalNumberOfIterations: number,
 	allowNegativeValues?: boolean,
 ): void;
@@ -77,7 +77,7 @@ export function analyticSteadyState(
 	DIFFUSION_RATE: number,
 	DECAY_RATE: number,
 	deltaX: number,
-	sources: Float64Array | number[],
+	sources: Float64Array,
 	maxMode: number,
 ): Float64Array;
 
@@ -93,7 +93,7 @@ export function analyticSteadyState(
 export function effectiveInfluence(
 	width: number,
 	height: number,
-	sources: Float64Array | number[],
+	sources: Float64Array,
 	lambda: number,
 	scale: number,
 ): Float64Array;
@@ -110,17 +110,17 @@ export function effectiveInfluence(
  * @param solution - Pre-allocated output array (written in place)
  */
 export function thomasAlgorithm(
-	lowerDiagonal: Float64Array | number[],
-	mainDiagonal: Float64Array | number[],
-	upperDiagonal: Float64Array | number[],
-	rightHandSide: Float64Array | number[],
+	lowerDiagonal: Float64Array,
+	mainDiagonal: Float64Array,
+	upperDiagonal: Float64Array,
+	rightHandSide: Float64Array,
 	n: number,
-	modifiedUpperDiagonal: Float64Array | number[],
-	modifiedRightHandSide: Float64Array | number[],
-	solution: Float64Array | number[],
+	modifiedUpperDiagonal: Float64Array,
+	modifiedRightHandSide: Float64Array,
+	solution: Float64Array,
 ): void;
 
 export function updateSinksAndSources(
-	sinks: Float64Array | number[],
-	sources: Float64Array | number[],
+	sinks: Float64Array,
+	sources: Float64Array,
 ): void;
