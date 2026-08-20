@@ -1,11 +1,33 @@
-
 # Explaining the Crank-Nicolson Method
 
-Here's a detailed explanation of the Crank-Nicolson method.
+The Crank‑Nicolson method is a finite‑difference scheme for solving the
+1‑D diffusion equation with optional decay and source terms. It is
+implicit in time and second‑order accurate in both space and time. The
+method leads to a tridiagonal system that is solved efficiently with the
+Thomas algorithm.
 
-```{.javascript file=src/crankNicolson.js}
+The module keeps all working arrays and coefficients at module scope so
+that they are allocated only once and reused across many calls to
+`CrankNicolson`.
+
+## Imports
+
+We import the Thomas algorithm solver that will be used to solve the
+tridiagonal system at each time step.
+
+```{.javascript #cn-imports}
 import { thomasAlgorithm } from "./thomasAlgorithm.js";
+```
 
+## Module‑level state
+
+The following variables hold the grid length, the tridiagonal
+coefficients for the left‑hand side matrix, the work arrays for the
+Thomas algorithm, the solution arrays `u` and `uNext`, and the
+pre‑computed constants `lambda`, `beta`, `halfLambda`, `centerCoeff`,
+and `dt`.
+
+```{.javascript #cn-variables}
 // Module-level variables for Crank-Nicolson
 let LENGTH;
 let lowerDiagonal, mainDiagonal, upperDiagonal;
@@ -13,7 +35,17 @@ let modifiedUpper, modifiedRHS, solution;
 let u, uNext;
 let lambda, beta, halfLambda, centerCoeff;
 let dt;
+```
 
+## Setting up the Crank‑Nicolson coefficients
+
+`setCNProperties` must be called once before any simulation. It stores
+the grid length and computes the coefficients that define the
+tridiagonal system. Neumann (zero‑flux) boundary conditions are
+implemented by adjusting the first and last rows of the matrix using
+ghost‑cell mirroring.
+
+```{.javascript #cn-set-properties}
 /**
  * Initialize properties for Crank-Nicolson method
  * @param {number} length - Number of grid points
@@ -71,7 +103,21 @@ export const setCNProperties = (
     u = new Float64Array(LENGTH);
     uNext = new Float64Array(LENGTH);
 };
+```
 
+## The time‑stepping loop
+
+The main `CrankNicolson` function advances the concentration field by
+`totalNumberOfIterations` time steps. At each step it builds the
+right‑hand side vector using the explicit part of the scheme (including
+source terms and Neumann boundary conditions via ghost‑cell mirroring),
+solves the tridiagonal system with the Thomas algorithm, and then swaps
+the solution arrays for the next iteration.
+
+If a negative concentration appears and `allowNegativeValues` is
+`false`, the function throws an error.
+
+```{.javascript #cn-main-function}
 /**
  * Solve 1D diffusion equation using Crank-Nicolson method
  * @param {Float64Array} concentrationData - Initial concentration values
@@ -185,4 +231,19 @@ export const CrankNicolson = (
         concentrationData[i] = u[i];
     }
 };
+```
+
+## Assembling the module
+
+The final code block tells Entangled to write the file
+`src/crankNicolson.js` by concatenating all the pieces defined above.
+
+```{.javascript file=src/crankNicolson.js}
+<<cn-imports>>
+
+<<cn-variables>>
+
+<<cn-set-properties>>
+
+<<cn-main-function>>
 ```

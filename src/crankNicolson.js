@@ -1,6 +1,9 @@
 // ~/~ begin <<literate/crankNicolson.qmd#src/crankNicolson.js>>[init]
+// ~/~ begin <<literate/crankNicolson.qmd#cn-imports>>[init]
 import { thomasAlgorithm } from "./thomasAlgorithm.js";
+// ~/~ end
 
+// ~/~ begin <<literate/crankNicolson.qmd#cn-variables>>[init]
 // Module-level variables for Crank-Nicolson
 let LENGTH;
 let lowerDiagonal, mainDiagonal, upperDiagonal;
@@ -8,7 +11,9 @@ let modifiedUpper, modifiedRHS, solution;
 let u, uNext;
 let lambda, beta, halfLambda, centerCoeff;
 let dt;
+// ~/~ end
 
+// ~/~ begin <<literate/crankNicolson.qmd#cn-set-properties>>[init]
 /**
  * Initialize properties for Crank-Nicolson method
  * @param {number} length - Number of grid points
@@ -66,7 +71,9 @@ export const setCNProperties = (
     u = new Float64Array(LENGTH);
     uNext = new Float64Array(LENGTH);
 };
+// ~/~ end
 
+// ~/~ begin <<literate/crankNicolson.qmd#cn-main-function>>[init]
 /**
  * Solve 1D diffusion equation using Crank-Nicolson method
  * @param {Float64Array} concentrationData - Initial concentration values
@@ -180,4 +187,5 @@ export const CrankNicolson = (
         concentrationData[i] = u[i];
     }
 };
+// ~/~ end
 // ~/~ end
