@@ -1,12 +1,31 @@
 # Explaining the ADI Method
 
-Here we will break down the ADI method and explain how it works. 
+The Alternating Direction Implicit (ADI) method solves the 2‑D diffusion
+equation with optional sink terms. It splits each time step into two
+half‑steps: an **x‑sweep** that treats the x‑derivative implicitly and the
+y‑derivative explicitly, followed by a **y‑sweep** that does the opposite.
+This turns a large 2‑D system into many small tridiagonal systems that can
+be solved efficiently with the Thomas algorithm.
 
-```{.javascript file=src/adi.js}
+The module keeps all working arrays and coefficients at module scope so
+that they are allocated only once and reused across many calls to `ADI`.
 
+## Imports and module‑level state
+
+We import the Thomas algorithm solver and a helper that pre‑allocates all
+the arrays we need.
+
+```{.javascript #adi-imports}
 import { thomasAlgorithm } from "./thomasAlgorithm.js";
 import { initADIArrays } from "./initArrays.js";
+```
 
+The following variables hold the grid dimensions, the tridiagonal
+coefficients for both sweeps, the intermediate concentration field, and
+the pre‑computed constants `alpha`, `halfDeltaT`, `scaledSources`, and
+`gamma` (which incorporates the sink term).
+
+```{.javascript #adi-variables}
 let WIDTH;
 let HEIGHT;
 let modifiedUpperDiagonal1, modifiedRightHandSide1, solution1;
@@ -16,7 +35,15 @@ let a1, b1, c1, d1;
 let a2, b2, c2, d2;
 let alpha, halfDeltaT, scaledSources;
 let gamma;
+```
 
+## Initialising the ADI arrays
+
+`setADIProperties` must be called once before any simulation. It stores
+the grid size and calls `initADIArrays` to allocate all working storage
+and compute the constant `alpha = D Δt / (2 Δx²)`.
+
+```{.javascript #adi-set-properties}
 export const setADIProperties = (
     width,
     height,
@@ -48,13 +75,31 @@ export const setADIProperties = (
         gamma,
     } = initADIArrays(WIDTH, HEIGHT, diffusionCoefficient, deltaX, deltaT));
 };
+```
 
+## Updating sinks and sources
+
+Before each call to `ADI` (or whenever the source/sink arrays change),
+`updateSinksAndSources` pre‑scales the source and sink terms so that they
+can be added directly to the right‑hand side during the sweeps.
+
+```{.javascript #adi-update-sinks-sources}
 export const updateSinksAndSources = (sinks, sources) => {
     for (let i = 0; i < WIDTH * HEIGHT; i++) {
         gamma[i] = (sinks[i] * halfDeltaT) / 2;
         scaledSources[i] = sources[i] * halfDeltaT;
     }
 }
+```
+
+## Updating the main diagonal for each sweep
+
+Because the sink term `gamma` varies in space, the main diagonal of the
+tridiagonal system must be rebuilt for every row (x‑sweep) or column
+(y‑sweep). Neumann (zero‑flux) boundary conditions are enforced by
+adjusting the first and last diagonal entries.
+
+```{.javascript #adi-update-diagonal-x}
 const updateMainDiagonalXstep = (yCoord) => {
     //update b1
     for (let i = 0; i < WIDTH; i++) {
@@ -65,7 +110,9 @@ const updateMainDiagonalXstep = (yCoord) => {
     b1[0] = 1 + alpha + gamma[yCoord * WIDTH + 0];
     b1[WIDTH - 1] = 1 + alpha + gamma[yCoord * WIDTH + (WIDTH - 1)];
 }
+```
 
+```{.javascript #adi-update-diagonal-y}
 const updateMainDiagonalYstep = (xCoord) => {
     //update b2
     for (let j = 0; j < HEIGHT; j++) {
@@ -76,7 +123,19 @@ const updateMainDiagonalYstep = (xCoord) => {
     b2[0] = 1 + alpha + gamma[0 * WIDTH + xCoord];
     b2[HEIGHT - 1] = 1 + alpha + gamma[(HEIGHT - 1) * WIDTH + xCoord];
 }
+```
 
+## The ADI time‑stepping loop
+
+The main `ADI` function advances the concentration field by
+`totalNumberOfIterations` half‑time steps. Each full iteration consists of
+an x‑sweep followed by a y‑sweep. Clamped indexing (`jBelow = max(j-1,0)`,
+etc.) implements Neumann boundary conditions for the explicit part.
+
+If a negative concentration appears and `allowNegativeValues` is `false`,
+the function logs a warning and returns `null`.
+
+```{.javascript #adi-main-function}
 export const ADI = (
     concentrationData,
     totalNumberOfIterations,
@@ -178,5 +237,26 @@ export const ADI = (
     }
     return currentConcentrationData;
 };
+```
+
+## Assembling the module
+
+The final code block tells Entangled to write the file `src/adi.js` by
+concatenating all the pieces defined above.
+
+```{.javascript file=src/adi.js}
+<<adi-imports>>
+
+<<adi-variables>>
+
+<<adi-set-properties>>
+
+<<adi-update-sinks-sources>>
+
+<<adi-update-diagonal-x>>
+
+<<adi-update-diagonal-y>>
+
+<<adi-main-function>>
 ```
 

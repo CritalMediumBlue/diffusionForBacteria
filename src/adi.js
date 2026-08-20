@@ -1,8 +1,8 @@
-// ~/~ begin <<literate/adi.qmd#src/adi.js>>[init]
-
+// ~/~ begin <<literate/adi.qmd#adi-imports>>[init]
 import { thomasAlgorithm } from "./thomasAlgorithm.js";
 import { initADIArrays } from "./initArrays.js";
-
+// ~/~ end
+// ~/~ begin <<literate/adi.qmd#adi-variables>>[init]
 let WIDTH;
 let HEIGHT;
 let modifiedUpperDiagonal1, modifiedRightHandSide1, solution1;
@@ -12,7 +12,8 @@ let a1, b1, c1, d1;
 let a2, b2, c2, d2;
 let alpha, halfDeltaT, scaledSources;
 let gamma;
-
+// ~/~ end
+// ~/~ begin <<literate/adi.qmd#adi-set-properties>>[init]
 export const setADIProperties = (
     width,
     height,
@@ -44,13 +45,16 @@ export const setADIProperties = (
         gamma,
     } = initADIArrays(WIDTH, HEIGHT, diffusionCoefficient, deltaX, deltaT));
 };
-
+// ~/~ end
+// ~/~ begin <<literate/adi.qmd#adi-update-sinks-sources>>[init]
 export const updateSinksAndSources = (sinks, sources) => {
     for (let i = 0; i < WIDTH * HEIGHT; i++) {
         gamma[i] = (sinks[i] * halfDeltaT) / 2;
         scaledSources[i] = sources[i] * halfDeltaT;
     }
 }
+// ~/~ end
+// ~/~ begin <<literate/adi.qmd#adi-update-diagonal-x>>[init]
 const updateMainDiagonalXstep = (yCoord) => {
     //update b1
     for (let i = 0; i < WIDTH; i++) {
@@ -61,7 +65,8 @@ const updateMainDiagonalXstep = (yCoord) => {
     b1[0] = 1 + alpha + gamma[yCoord * WIDTH + 0];
     b1[WIDTH - 1] = 1 + alpha + gamma[yCoord * WIDTH + (WIDTH - 1)];
 }
-
+// ~/~ end
+// ~/~ begin <<literate/adi.qmd#adi-update-diagonal-y>>[init]
 const updateMainDiagonalYstep = (xCoord) => {
     //update b2
     for (let j = 0; j < HEIGHT; j++) {
@@ -72,7 +77,8 @@ const updateMainDiagonalYstep = (xCoord) => {
     b2[0] = 1 + alpha + gamma[0 * WIDTH + xCoord];
     b2[HEIGHT - 1] = 1 + alpha + gamma[(HEIGHT - 1) * WIDTH + xCoord];
 }
-
+// ~/~ end
+// ~/~ begin <<literate/adi.qmd#adi-main-function>>[init]
 export const ADI = (
     concentrationData,
     totalNumberOfIterations,
@@ -174,4 +180,5 @@ export const ADI = (
     }
     return currentConcentrationData;
 };
+// ~/~ end
 // ~/~ end
