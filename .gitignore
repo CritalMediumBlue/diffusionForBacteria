@@ -30,3 +30,8 @@ Thumbs.db
 
 # Local AI tool state
 .aider*
+
+# Everything related to python virtual environments and package managers and cache
+venv/
+__pycache__/
+

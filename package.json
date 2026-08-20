@@ -37,7 +37,9 @@
     "docs": "jsdoc -c jsdoc.json",
     "docs:serve": "npx http-server docs -p 8081 -o",
     "plot": "vite plotting",
-    "plot:article2D": "vite plottingarticle2D"
+    "plot:article2D": "vite plottingarticle2D",
+    "build": "entangled -c literate/entangled.toml"
+		
   },
   "repository": {
     "type": "git",

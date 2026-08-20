@@ -1,0 +1,30 @@
+project:
+  type: book
+
+book:
+  title: "diffusion algorithms for bacteria"
+  author: "Norah Jones"
+  date: "8/20/2026"
+  chapters:
+    - index.qmd
+    - adi.qmd
+    - crankNicolson.qmd
+    - analyticSolution.qmd
+    - effective.qmd
+    - thomasAlgorithm.qmd
+    - initArrays.qmd
+    - helpers.qmd
+    - references.qmd
+
+bibliography: references.bib
+
+format:
+  html:
+    theme:
+      - cosmo
+      - brand
+  pdf:
+    documentclass: scrreprt
+
+
+

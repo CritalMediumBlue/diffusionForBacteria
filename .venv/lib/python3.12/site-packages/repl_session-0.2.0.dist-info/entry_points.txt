@@ -1,0 +1,2 @@
+[console_scripts]
+repl-session = repl_session:main
