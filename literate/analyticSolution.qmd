@@ -181,7 +181,7 @@ The final code block tells Entangled to write the file
 ```{ojs}
 //| echo: false
 
-import { analyticSteadyState } from "./src/analyticSolution.js"
+import { analyticSteadyState } from "../src/analyticSolution.js"
 ```
 
 ```{ojs}
