@@ -1,3 +1,5 @@
+// ~/~ begin <<literate/adi.qmd#src/adi.js>>[init]
+
 import { thomasAlgorithm } from "./thomasAlgorithm.js";
 import { initADIArrays } from "./initArrays.js";
 
@@ -172,3 +174,4 @@ export const ADI = (
     }
     return currentConcentrationData;
 };
+// ~/~ end
