@@ -1,3 +1,4 @@
+// ~/~ begin <<literate/crankNicolson.qmd#src/crankNicolson.js>>[init]
 import { thomasAlgorithm } from "./thomasAlgorithm.js";
 
 // Module-level variables for Crank-Nicolson
@@ -179,3 +180,4 @@ export const CrankNicolson = (
         concentrationData[i] = u[i];
     }
 };
+// ~/~ end
