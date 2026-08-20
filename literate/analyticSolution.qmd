@@ -1,4 +1,6 @@
+
 # Analytic Steady‑State Solution
+
 
 For a 2‑D diffusion equation with Neumann (zero‑flux) boundary
 conditions, the steady‑state concentration can be expressed as a double
@@ -172,7 +174,7 @@ The final code block tells Entangled to write the file
 
 <<as-main>>
 ```
-
+ 
 
 ## Interactive example
 
