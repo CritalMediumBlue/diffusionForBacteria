@@ -1,5 +1,5 @@
-
-
+// ~/~ begin <<literate/analyticSolution.qmd#src/analyticSolution.js>>[init]
+// ~/~ begin <<literate/analyticSolution.qmd#as-helper>>[init]
 function constantSourceTermOptimized(n, m, Lx, Ly, sources, activeSourceIndices, cosX, cosY, WIDTH, deltaX) {
     const e_n = n === 0 ? 0.5 : 1;
     const e_m = m === 0 ? 0.5 : 1;
@@ -14,7 +14,9 @@ function constantSourceTermOptimized(n, m, Lx, Ly, sources, activeSourceIndices,
 
     return coefficient * sum;
 }
+// ~/~ end
 
+// ~/~ begin <<literate/analyticSolution.qmd#as-main>>[init]
 export const analyticSteadyState = (
     WIDTH,
     HEIGHT,
