@@ -1,0 +1,12 @@
+version = "2.0"
+watch_list = ["literate/*.qmd"]
+
+[[languages]]
+name = "JavaScript"
+identifiers = ["javascript", "js"]
+comment = { open = "//" }
+
+[[languages]]
+name = "Observable JavaScript"
+identifiers = ["ojs"]
+comment = { open = "//" }

@@ -1,71 +1,69 @@
 {
-  "name": "handy-diffusion",
-  "version": "1.0.15",
-  "description": "algorithms to simulate diffusion",
-  "type": "module",
-  "main": "./src/index.js",
-  "types": "./src/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./src/index.d.ts",
-      "import": "./src/index.js",
-      "default": "./src/index.js"
+    "name": "handy-diffusion",
+    "version": "1.0.15",
+    "description": "algorithms to simulate diffusion",
+    "type": "module",
+    "main": "./src/index.js",
+    "types": "./src/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./src/index.d.ts",
+            "import": "./src/index.js",
+            "default": "./src/index.js"
+        }
+    },
+    "files": [
+        "src/index.js",
+        "src/index.d.ts",
+        "src/adi.js",
+        "src/analyticSolution.js",
+        "src/crankNicolson.js",
+        "src/effective.js",
+        "src/initArrays.js",
+        "src/thomasAlgorithm.js",
+        "README.md",
+        "LICENSE"
+    ],
+    "sideEffects": false,
+    "scripts": {
+        "test": "vitest run",
+        "test:ui": "vitest --ui --open --api.port 51204",
+        "coverage": "vitest run --coverage",
+        "coverage:serve": "npx http-server coverage -p 8080 -o",
+        "lint": "eslint \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"plottingarticle2D/**/*.js\"",
+        "lint:fix": "eslint \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"plottingarticle2D/**/*.js\" --fix",
+        "format": "prettier --write \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"plottingarticle2D/**/*.js\" \"*.json\" \"*.md\"",
+        "format:check": "prettier --check \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"plottingarticle2D/**/*.js\" \"*.json\" \"*.md\"",
+        "docs": "jsdoc -c jsdoc.json",
+        "docs:serve": "npx http-server docs -p 8081 -o",
+        "plot": "vite plotting",
+        "plot:article2D": "vite plottingarticle2D"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/CritalMediumBlue/diffusionForBacteria.git"
+    },
+    "keywords": [
+        "diffusion",
+        "ADI",
+        "Crank-Nicolson"
+    ],
+    "author": "Ricardo",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/CritalMediumBlue/diffusionForBacteria/issues"
+    },
+    "homepage": "https://github.com/CritalMediumBlue/diffusionForBacteria#readme",
+    "devDependencies": {
+        "@eslint/js": "^9.39.2",
+        "@vitest/coverage-v8": "^4.0.16",
+        "@vitest/ui": "^4.0.16",
+        "eslint": "^9.39.2",
+        "globals": "^17.0.0",
+        "jsdoc": "^4.0.5",
+        "plotly.js-dist": "^3.3.1",
+        "prettier": "^3.7.4",
+        "vite": "^7.3.1",
+        "vitest": "^4.0.16"
     }
-  },
-  "files": [
-    "src/index.js",
-    "src/index.d.ts",
-    "src/adi.js",
-    "src/analyticSolution.js",
-    "src/crankNicolson.js",
-    "src/effective.js",
-    "src/initArrays.js",
-    "src/thomasAlgorithm.js",
-    "README.md",
-    "LICENSE"
-  ],
-  "sideEffects": false,
-  "scripts": {
-    "test": "vitest run",
-    "test:ui": "vitest --ui --open --api.port 51204",
-    "coverage": "vitest run --coverage",
-    "coverage:serve": "npx http-server coverage -p 8080 -o",
-    "lint": "eslint \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"plottingarticle2D/**/*.js\"",
-    "lint:fix": "eslint \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"plottingarticle2D/**/*.js\" --fix",
-    "format": "prettier --write \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"plottingarticle2D/**/*.js\" \"*.json\" \"*.md\"",
-    "format:check": "prettier --check \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"plottingarticle2D/**/*.js\" \"*.json\" \"*.md\"",
-    "docs": "jsdoc -c jsdoc.json",
-    "docs:serve": "npx http-server docs -p 8081 -o",
-    "plot": "vite plotting",
-    "plot:article2D": "vite plottingarticle2D",
-    "build": "entangled -c literate/entangled.toml"
-		
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/CritalMediumBlue/diffusionForBacteria.git"
-  },
-  "keywords": [
-    "diffusion",
-    "ADI",
-    "Crank-Nicolson"
-  ],
-  "author": "Ricardo",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/CritalMediumBlue/diffusionForBacteria/issues"
-  },
-  "homepage": "https://github.com/CritalMediumBlue/diffusionForBacteria#readme",
-  "devDependencies": {
-    "@eslint/js": "^9.39.2",
-    "@vitest/coverage-v8": "^4.0.16",
-    "@vitest/ui": "^4.0.16",
-    "eslint": "^9.39.2",
-    "globals": "^17.0.0",
-    "jsdoc": "^4.0.5",
-    "plotly.js-dist": "^3.3.1",
-    "prettier": "^3.7.4",
-    "vite": "^7.3.1",
-    "vitest": "^4.0.16"
-  }
 }

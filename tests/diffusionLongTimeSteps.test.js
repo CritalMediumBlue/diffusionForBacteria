@@ -1,4 +1,4 @@
-import { ADI, setADIProperties, updateSinksAndSources} from "handy-diffusion";
+import { ADI, setADIProperties, updateSinksAndSources } from "handy-diffusion";
 import { describe, test, expect } from "vitest";
 
 const testWindow = 5; // seconds

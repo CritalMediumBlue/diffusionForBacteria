@@ -28,14 +28,14 @@ The package exposes several named exports. Import them directly from `handy-diff
 
 ```js
 import {
-  ADI,
-  setADIProperties,
-  updateSinksAndSources,
-  CrankNicolson,
-  setCNProperties,
-  analyticSteadyState,
-  effectiveInfluence,
-  thomasAlgorithm,
+    ADI,
+    setADIProperties,
+    updateSinksAndSources,
+    CrankNicolson,
+    setCNProperties,
+    analyticSteadyState,
+    effectiveInfluence,
+    thomasAlgorithm,
 } from "handy-diffusion";
 ```
 
@@ -126,13 +126,13 @@ const maxMode = 30;
 sources[10 * width + 10] = 0.5;
 
 const steadyState = analyticSteadyState(
-  width,
-  height,
-  diffusionRate,
-  decayRate,
-  deltaX,
-  sources,
-  maxMode
+    width,
+    height,
+    diffusionRate,
+    decayRate,
+    deltaX,
+    sources,
+    maxMode
 );
 ```
 
@@ -173,14 +173,14 @@ const modifiedRightHandSide = new Float64Array(n);
 const solution = new Float64Array(n);
 
 thomasAlgorithm(
-  lowerDiagonal,
-  mainDiagonal,
-  upperDiagonal,
-  rightHandSide,
-  n,
-  modifiedUpperDiagonal,
-  modifiedRightHandSide,
-  solution
+    lowerDiagonal,
+    mainDiagonal,
+    upperDiagonal,
+    rightHandSide,
+    n,
+    modifiedUpperDiagonal,
+    modifiedRightHandSide,
+    solution
 );
 
 console.log(solution); // Float64Array [1, 1, 1]

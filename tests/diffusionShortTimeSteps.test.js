@@ -1,4 +1,4 @@
-import { ADI, setADIProperties, updateSinksAndSources} from "handy-diffusion";
+import { ADI, setADIProperties, updateSinksAndSources } from "handy-diffusion";
 
 import { describe, test, expect } from "vitest";
 
@@ -255,7 +255,7 @@ describe("Conservation of mass", () => {
 
             // Act
 
-            const resultADI = ADI(initial, iterations, true); 
+            const resultADI = ADI(initial, iterations, true);
 
             // Assert
             let massSum = 0;

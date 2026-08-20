@@ -1,25 +1,25 @@
 {
-"source": {
-  "include": [
-    "adi.js",
-    "analyticSolution.js",
-    "crankNicolson.js",
-    "effective.js",
-    "helpers.js",
-    "initArrays.js",
-    "thomasAlgorithm.js",
-    "index.js"
-  ],
-  "excludePattern": "(test|spec)\\.js$"
-},
-  "opts": {
-    "destination": "./docs",
-    "recurse": true,
-    "readme": "README.md"
-  },
-  "plugins": [],
-  "templates": {
-    "cleverLinks": false,
-    "monospaceLinks": false
-  }
+    "source": {
+        "include": [
+            "adi.js",
+            "analyticSolution.js",
+            "crankNicolson.js",
+            "effective.js",
+            "helpers.js",
+            "initArrays.js",
+            "thomasAlgorithm.js",
+            "index.js"
+        ],
+        "excludePattern": "(test|spec)\\.js$"
+    },
+    "opts": {
+        "destination": "./docs",
+        "recurse": true,
+        "readme": "README.md"
+    },
+    "plugins": [],
+    "templates": {
+        "cleverLinks": false,
+        "monospaceLinks": false
+    }
 }

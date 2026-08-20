@@ -1,7 +1,9 @@
+// ~/~ begin <<literate/adi.qmd#src/adi.js>>[init]
 // ~/~ begin <<literate/adi.qmd#adi-imports>>[init]
 import { thomasAlgorithm } from "./thomasAlgorithm.js";
 import { initADIArrays } from "./initArrays.js";
 // ~/~ end
+
 // ~/~ begin <<literate/adi.qmd#adi-variables>>[init]
 let WIDTH;
 let HEIGHT;
@@ -13,6 +15,7 @@ let a2, b2, c2, d2;
 let alpha, halfDeltaT, scaledSources;
 let gamma;
 // ~/~ end
+
 // ~/~ begin <<literate/adi.qmd#adi-set-properties>>[init]
 export const setADIProperties = (
     width,
@@ -46,6 +49,7 @@ export const setADIProperties = (
     } = initADIArrays(WIDTH, HEIGHT, diffusionCoefficient, deltaX, deltaT));
 };
 // ~/~ end
+
 // ~/~ begin <<literate/adi.qmd#adi-update-sinks-sources>>[init]
 export const updateSinksAndSources = (sinks, sources) => {
     for (let i = 0; i < WIDTH * HEIGHT; i++) {
@@ -54,6 +58,7 @@ export const updateSinksAndSources = (sinks, sources) => {
     }
 }
 // ~/~ end
+
 // ~/~ begin <<literate/adi.qmd#adi-update-diagonal-x>>[init]
 const updateMainDiagonalXstep = (yCoord) => {
     //update b1
@@ -66,6 +71,7 @@ const updateMainDiagonalXstep = (yCoord) => {
     b1[WIDTH - 1] = 1 + alpha + gamma[yCoord * WIDTH + (WIDTH - 1)];
 }
 // ~/~ end
+
 // ~/~ begin <<literate/adi.qmd#adi-update-diagonal-y>>[init]
 const updateMainDiagonalYstep = (xCoord) => {
     //update b2
@@ -78,6 +84,7 @@ const updateMainDiagonalYstep = (xCoord) => {
     b2[HEIGHT - 1] = 1 + alpha + gamma[(HEIGHT - 1) * WIDTH + xCoord];
 }
 // ~/~ end
+
 // ~/~ begin <<literate/adi.qmd#adi-main-function>>[init]
 export const ADI = (
     concentrationData,

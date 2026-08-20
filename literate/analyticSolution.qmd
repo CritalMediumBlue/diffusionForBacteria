@@ -1,4 +1,3 @@
-
 # Analytic Steady‑State Solution
 
 
@@ -174,14 +173,14 @@ The final code block tells Entangled to write the file
 
 <<as-main>>
 ```
- 
+
 
 ## Interactive example
 
 ```{ojs}
 //| echo: false
 
-import { analyticSteadyState } from "../src/analyticSolution.js"
+import { analyticSteadyState } from "./analyticSolution.js"
 ```
 
 ```{ojs}

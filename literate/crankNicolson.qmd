@@ -10,10 +10,12 @@ The module keeps all working arrays and coefficients at module scope so
 that they are allocated only once and reused across many calls to
 `CrankNicolson`.
 
+
+
 ## Imports
 
 We import the Thomas algorithm solver that will be used to solve the
-tridiagonal system at each time step.
+tridiagonal system at each time step:
 
 ```{.javascript #cn-imports}
 import { thomasAlgorithm } from "./thomasAlgorithm.js";

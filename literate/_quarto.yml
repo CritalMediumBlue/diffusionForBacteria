@@ -1,5 +1,6 @@
 project:
   type: book
+  output-dir: ../docs
 
 book:
   title: "diffusion algorithms for bacteria"
@@ -16,6 +17,9 @@ book:
     - helpers.qmd
     - references.qmd
 
+resources:
+  - analyticSolution.js
+
 bibliography: references.bib
 
 format:
@@ -23,8 +27,6 @@ format:
     theme:
       - cosmo
       - brand
-  pdf:
-    documentclass: scrreprt
 
 
 
