@@ -227,7 +227,7 @@ concentration = analyticSteadyState(
   maxMode
 );
 
-const cells = Array.from(concentration, (value, index) => ({
+cells = Array.from(concentration, (value, index) => ({
   x: index % WIDTH,
   y: Math.floor(index / WIDTH),
   concentration: value
