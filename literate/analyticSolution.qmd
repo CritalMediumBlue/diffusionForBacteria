@@ -197,7 +197,7 @@ viewof decayRate = Inputs.range([0.01, 2], {
   value: 0.1
 })
 
-viewof maxMode = Inputs.range(, {[1][40]
+viewof maxMode = Inputs.range([1, 40], {
   label: "Maximum mode",
   step: 1,
   value: 20
