@@ -1,6 +1,6 @@
 # Analytic Steady‑State Solution
 
-For a 2‑D diffusion‑decay equation with Neumann (zero‑flux) boundary
+For a 2‑D diffusion equation with Neumann (zero‑flux) boundary
 conditions, the steady‑state concentration can be expressed as a double
 cosine series. Each term in the series is an eigenfunction of the
 Laplacian, and the coefficients are obtained by projecting the source
@@ -24,6 +24,7 @@ Q_{nm} = \frac{4 \epsilon_n \epsilon_m \Delta x^2}{L_x L_y}
 where \(\epsilon_n = 0.5\) if \(n=0\) and \(1\) otherwise. The function
 iterates only over cells where the source is non‑zero, using a
 pre‑computed list of active indices and pre‑computed cosine arrays.
+
 
 ```{.javascript #as-helper}
 function constantSourceTermOptimized(n, m, Lx, Ly, sources, activeSourceIndices, cosX, cosY, WIDTH, deltaX) {
@@ -171,3 +172,86 @@ The final code block tells Entangled to write the file
 
 <<as-main>>
 ```
+
+
+## Interactive example
+
+```{ojs}
+//| echo: false
+
+import { analyticSteadyState } from "src/analyticSolution.js"
+```
+
+```{ojs}
+//| echo: false
+
+viewof diffusionRate = Inputs.range([0.01, 2], {
+  label: "Diffusion rate",
+  step: 0.01,
+  value: 0.2
+})
+
+viewof decayRate = Inputs.range([0.01, 2], {
+  label: "Decay rate",
+  step: 0.01,
+  value: 0.1
+})
+
+viewof maxMode = Inputs.range(, {[1][40]
+  label: "Maximum mode",
+  step: 1,
+  value: 20
+})
+```
+
+```{ojs}
+//| label: fig-analytic-steady-state
+//| fig-cap: "Interactive analytic steady-state concentration field"
+//| echo: false
+
+WIDTH = 60;
+HEIGHT = 40;
+deltaX = 1;
+
+// A single source at the grid centre.
+sources = new Float64Array(WIDTH * HEIGHT);
+sources[Math.floor(HEIGHT / 2) * WIDTH + Math.floor(WIDTH / 2)] = 1;
+
+concentration = analyticSteadyState(
+  WIDTH,
+  HEIGHT,
+  diffusionRate,
+  decayRate,
+  deltaX,
+  sources,
+  maxMode
+);
+
+const cells = Array.from(concentration, (value, index) => ({
+  x: index % WIDTH,
+  y: Math.floor(index / WIDTH),
+  concentration: value
+}));
+
+Plot.plot({
+  width,
+  height: Math.round(width * HEIGHT / WIDTH),
+  aspectRatio: WIDTH / HEIGHT,
+  x: {label: "x"},
+  y: {label: "y", reverse: true},
+  color: {
+    scheme: "viridis",
+    label: "Concentration"
+  },
+  marks: [
+    Plot.cell(cells, {
+      x: "x",
+      y: "y",
+      fill: "concentration",
+      inset: 0
+    })
+  ]
+})
+```
+
+
