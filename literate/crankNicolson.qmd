@@ -17,7 +17,7 @@ that they are allocated only once and reused across many calls to
 We import the Thomas algorithm solver that will be used to solve the
 tridiagonal system at each time step:
 
-```{.javascript #cn-imports}
+```{.typescript #cn-imports}
 import { thomasAlgorithm } from "./thomasAlgorithm.js";
 ```
 
@@ -29,14 +29,22 @@ Thomas algorithm, the solution arrays `u` and `uNext`, and the
 pre‑computed constants `lambda`, `beta`, `halfLambda`, `centerCoeff`,
 and `dt`.
 
-```{.javascript #cn-variables}
+```{.typescript #cn-variables}
 // Module-level variables for Crank-Nicolson
-let LENGTH;
-let lowerDiagonal, mainDiagonal, upperDiagonal;
-let modifiedUpper, modifiedRHS, solution;
-let u, uNext;
-let lambda, beta, halfLambda, centerCoeff;
-let dt;
+let LENGTH: number;
+let lowerDiagonal: Float64Array;
+let mainDiagonal: Float64Array;
+let upperDiagonal: Float64Array;
+let modifiedUpper: Float64Array;
+let modifiedRHS: Float64Array;
+let solution: Float64Array;
+let u: Float64Array;
+let uNext: Float64Array;
+let lambda: number;
+let beta: number;
+let halfLambda: number;
+let centerCoeff: number;
+let dt: number;
 ```
 
 ## Setting up the Crank‑Nicolson coefficients
@@ -47,22 +55,22 @@ tridiagonal system. Neumann (zero‑flux) boundary conditions are
 implemented by adjusting the first and last rows of the matrix using
 ghost‑cell mirroring.
 
-```{.javascript #cn-set-properties}
+```{.typescript #cn-set-properties}
 /**
  * Initialize properties for Crank-Nicolson method
  * @param {number} length - Number of grid points
  * @param {number} diffusionCoefficient - Diffusion coefficient (alpha)
  * @param {number} deltaX - Spatial step size
  * @param {number} deltaT - Time step size
- * @param {number} decayRate - Decay rate constant (k)
+ * @param {number} [decayRate=0] - Decay rate constant (k)
  */
 export const setCNProperties = (
-    length,
-    diffusionCoefficient,
-    deltaX,
-    deltaT,
-    decayRate = 0
-) => {
+    length: number,
+    diffusionCoefficient: number,
+    deltaX: number,
+    deltaT: number,
+    decayRate: number = 0,
+): void => {
     LENGTH = length;
     dt = deltaT;
 
@@ -78,7 +86,7 @@ export const setCNProperties = (
     upperDiagonal = new Float64Array(LENGTH);
 
     // Interior coefficients
-    for (let i = 1; i < LENGTH - 1; i++) {
+    for (let i: number = 1; i < LENGTH - 1; i++) {
         lowerDiagonal[i] = -halfLambda;
         mainDiagonal[i] = centerCoeff;
         upperDiagonal[i] = -halfLambda;
@@ -119,42 +127,40 @@ the solution arrays for the next iteration.
 If a negative concentration appears and `allowNegativeValues` is
 `false`, the function throws an error.
 
-```{.javascript #cn-main-function}
+```{.typescript #cn-main-function}
 /**
  * Solve 1D diffusion equation using Crank-Nicolson method
  * @param {Float64Array} concentrationData - Initial concentration values
  * @param {Float64Array} sources - Source terms
  * @param {number} totalNumberOfIterations - Number of time steps
- * @param {boolean} allowNegativeValues - Whether to allow negative concentrations
+ * @param {boolean} [allowNegativeValues=false] - Whether to allow negative concentrations
  */
 export const CrankNicolson = (
-    concentrationData,
-    sources,
-    totalNumberOfIterations,
-    allowNegativeValues = false
-) => {
-  
-
+    concentrationData: Float64Array,
+    sources: Float64Array,
+    totalNumberOfIterations: number,
+    allowNegativeValues: boolean = false,
+): void => {
     // Copy initial condition
-    for (let i = 0; i < LENGTH; i++) {
+    for (let i: number = 0; i < LENGTH; i++) {
         u[i] = concentrationData[i];
     }
 
     // Time-stepping loop
-    for (let step = 0; step < totalNumberOfIterations; step++) {
+    for (let step: number = 0; step < totalNumberOfIterations; step++) {
         // Build right-hand side d = B*u^n + dt*S, with Neumann BC via mirroring.
-        const d = modifiedRHS;
+        const d: Float64Array = modifiedRHS;
 
         // Left boundary i = 0, using ghost cell u_{-1} = u_1 for zero flux
         // B coefficients: (λ/2) u_{i-1}^n + (1 - λ - β) u_i^n + (λ/2) u_{i+1}^n
         // Substituting u_{-1} = u_1: (λ/2) u_1 + (1 - λ - β) u_0 + (λ/2) u_1
         {
-            const i = 0;
-            const u_im1 = u[1];       // ghost cell: u_{-1} = u_1
-            const u_i   = u[0];
-            const u_ip1 = u[1];
+            const i: number = 0;
+            const u_im1: number = u[1];       // ghost cell: u_{-1} = u_1
+            const u_i: number   = u[0];
+            const u_ip1: number = u[1];
 
-            const rhsVal =
+            const rhsVal: number =
                 halfLambda * u_im1 +
                 (1.0 - lambda - beta) * u_i +
                 halfLambda * u_ip1 +
@@ -164,12 +170,12 @@ export const CrankNicolson = (
         }
 
         // Interior points 1..LENGTH-2
-        for (let i = 1; i < LENGTH - 1; i++) {
-            const u_im1 = u[i - 1];
-            const u_i   = u[i];
-            const u_ip1 = u[i + 1];
+        for (let i: number = 1; i < LENGTH - 1; i++) {
+            const u_im1: number = u[i - 1];
+            const u_i: number   = u[i];
+            const u_ip1: number = u[i + 1];
 
-            const rhsVal =
+            const rhsVal: number =
                 halfLambda * u_im1 +
                 (1.0 - lambda - beta) * u_i +
                 halfLambda * u_ip1 +
@@ -181,12 +187,12 @@ export const CrankNicolson = (
         // Right boundary i = LENGTH-1, using ghost cell u_n = u_{n-2} for zero flux
         // Substituting u_n = u_{n-2}: (λ/2) u_{n-2} + (1 - λ - β) u_{n-1} + (λ/2) u_{n-2}
         {
-            const i = LENGTH - 1;
-            const u_im1 = u[LENGTH - 2];
-            const u_i   = u[LENGTH - 1];
-            const u_ip1 = u[LENGTH - 2];   // ghost cell: u_n = u_{n-2}
+            const i: number = LENGTH - 1;
+            const u_im1: number = u[LENGTH - 2];
+            const u_i: number   = u[LENGTH - 1];
+            const u_ip1: number = u[LENGTH - 2];   // ghost cell: u_n = u_{n-2}
 
-            const rhsVal =
+            const rhsVal: number =
                 halfLambda * u_im1 +
                 (1.0 - lambda - beta) * u_i +
                 halfLambda * u_ip1 +
@@ -204,12 +210,12 @@ export const CrankNicolson = (
             LENGTH,
             modifiedUpper,
             modifiedRHS,
-            solution
+            solution,
         );
 
         // Copy solution and optionally check for negativity
-        let hasNegative = false;
-        for (let i = 0; i < LENGTH; i++) {
+        let hasNegative: boolean = false;
+        for (let i: number = 0; i < LENGTH; i++) {
             uNext[i] = solution[i];
             if (!allowNegativeValues && uNext[i] < 0) {
                 hasNegative = true;
@@ -218,18 +224,18 @@ export const CrankNicolson = (
 
         if (hasNegative && !allowNegativeValues) {
             throw new Error(
-                "Negative concentrations encountered in CrankNicolson step " + step
+                "Negative concentrations encountered in CrankNicolson step " + step,
             );
         }
 
         // Swap u and uNext without reallocating
-        const tmp = u;
+        const tmp: Float64Array = u;
         u = uNext;
         uNext = tmp;
     }
 
     // Copy result back to concentrationData
-    for (let i = 0; i < LENGTH; i++) {
+    for (let i: number = 0; i < LENGTH; i++) {
         concentrationData[i] = u[i];
     }
 };
@@ -240,7 +246,7 @@ export const CrankNicolson = (
 The final code block tells Entangled to write the file
 `src/crankNicolson.js` by concatenating all the pieces defined above.
 
-```{.javascript file=src/crankNicolson.js}
+```{.typescript file=src/crankNicolson.ts}
 <<cn-imports>>
 
 <<cn-variables>>
