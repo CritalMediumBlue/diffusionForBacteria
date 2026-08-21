@@ -5,7 +5,7 @@ import {
     updateSinksAndSources,
     CrankNicolson,
     setCNProperties,
-} from "handy-diffusion";
+} from "../src/index.js";
 import { describe, test, expect } from "vitest";
 import { checkForSteadyState, calculateDifference } from "./src/helpers.js";
 import { mulberry32 } from "./random.js";
