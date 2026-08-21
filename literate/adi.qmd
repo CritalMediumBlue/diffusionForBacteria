@@ -1,4 +1,3 @@
-
 # Explaining the ADI Method
 
 The Alternating Direction Implicit (ADI) method solves the 2‑D diffusion
@@ -13,12 +12,11 @@ that they are allocated only once and reused across many calls to `ADI`.
 
 ## Imports and module‑level state
 
-We import the Thomas algorithm solver and a helper that pre‑allocates all
-the arrays we need.
+We import the Thomas algorithm solver. No other imports are needed because
+the array‑initialisation code is defined later in this same module.
 
 ```{.javascript #adi-imports}
 import { thomasAlgorithm } from "./thomasAlgorithm.js";
-import { initADIArrays } from "./initArrays.js";
 ```
 
 The following variables hold the grid dimensions, the tridiagonal
@@ -240,6 +238,83 @@ export const ADI = (
 };
 ```
 
+## Array initialisation helpers
+
+The `generateDiagonals` function creates the tridiagonal coefficient
+arrays for a single sweep. It fills the lower, main, and upper diagonals
+with the appropriate values and applies Neumann boundary conditions by
+adjusting the first and last entries.
+
+```{.javascript #adi-init-arrays}
+const generateDiagonals = (length, alpha, gamma) => {
+    const lowerDiagonal = new Float64Array(length).fill(-alpha);
+    const mainDiagonal = new Float64Array(length).fill(1 + 2 * alpha + gamma);
+    const upperDiagonal = new Float64Array(length).fill(-alpha);
+    const rightHandSide = new Float64Array(length);
+    mainDiagonal[0] = 1 + alpha + gamma;
+    mainDiagonal[length - 1] = 1 + alpha + gamma;
+    lowerDiagonal[0] = 0;
+    upperDiagonal[length - 1] = 0;
+    return { lowerDiagonal, mainDiagonal, upperDiagonal, rightHandSide };
+};
+```
+
+`initADIArrays` allocates all the working arrays needed by the ADI
+solver and pre‑computes the constant `alpha`. It returns an object with
+all the arrays and constants, which `setADIProperties` destructures into
+the module‑level variables.
+
+```{.javascript #adi-init-arrays}
+export const initADIArrays = (WIDTH, HEIGHT, DIFFUSION_RATE, deltaX, deltaT) => {
+    const modifiedUpperDiagonal1 = new Float64Array(WIDTH);
+    const modifiedRightHandSide1 = new Float64Array(WIDTH);
+    const solution1 = new Float64Array(WIDTH);
+    const modifiedUpperDiagonal2 = new Float64Array(HEIGHT);
+    const modifiedRightHandSide2 = new Float64Array(HEIGHT);
+    const solution2 = new Float64Array(HEIGHT);
+    const intermediateConcentration = new Float64Array(WIDTH * HEIGHT);
+    const scaledSources = new Float64Array(WIDTH * HEIGHT);
+    const gamma = new Float64Array(WIDTH * HEIGHT).fill(0);
+
+    const alpha = (DIFFUSION_RATE * deltaT) / (2 * deltaX * deltaX);
+    const gammaPoint = 0;
+    const {
+        lowerDiagonal: a1,
+        mainDiagonal: b1,
+        upperDiagonal: c1,
+        rightHandSide: d1,
+    } = generateDiagonals(WIDTH, alpha, gammaPoint);
+    const {
+        lowerDiagonal: a2,
+        mainDiagonal: b2,
+        upperDiagonal: c2,
+        rightHandSide: d2,
+    } = generateDiagonals(HEIGHT, alpha, gammaPoint);
+    const halfDeltaT = deltaT / 2;
+    return {
+        modifiedUpperDiagonal1,
+        modifiedRightHandSide1,
+        solution1,
+        modifiedUpperDiagonal2,
+        modifiedRightHandSide2,
+        solution2,
+        intermediateConcentration,
+        a1,
+        b1,
+        c1,
+        d1,
+        a2,
+        b2,
+        c2,
+        d2,
+        alpha,
+        halfDeltaT,
+        scaledSources,
+        gamma,
+    };
+};
+```
+
 ## Assembling the module
 
 The final code block tells Entangled to write the file `src/adi.js` by
@@ -259,5 +334,6 @@ concatenating all the pieces defined above:
 <<adi-update-diagonal-y>>
 
 <<adi-main-function>>
-```
 
+<<adi-init-arrays>>
+```

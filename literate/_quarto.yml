@@ -13,7 +13,6 @@ book:
     - analyticSolution.qmd
     - effective.qmd
     - thomasAlgorithm.qmd
-    - initArrays.qmd
     - helpers.qmd
     - references.qmd
 
@@ -27,6 +26,3 @@ format:
     theme:
       - cosmo
       - brand
-
-
-
