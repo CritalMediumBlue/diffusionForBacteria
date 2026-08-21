@@ -15,7 +15,7 @@ that they are allocated only once and reused across many calls to `ADI`.
 We import the Thomas algorithm solver. No other imports are needed because
 the array‑initialisation code is defined later in this same module.
 
-```{.javascript #adi-imports}
+```{.typescript #adi-imports}
 import { thomasAlgorithm } from "./thomasAlgorithm.js";
 ```
 
@@ -24,16 +24,16 @@ coefficients for both sweeps, the intermediate concentration field, and
 the pre‑computed constants `alpha`, `halfDeltaT`, `scaledSources`, and
 `gamma` (which incorporates the sink term).
 
-```{.javascript #adi-variables}
-let WIDTH;
-let HEIGHT;
-let modifiedUpperDiagonal1, modifiedRightHandSide1, solution1;
-let modifiedUpperDiagonal2, modifiedRightHandSide2, solution2;
-let intermediateConcentration;
-let a1, b1, c1, d1;
-let a2, b2, c2, d2;
-let alpha, halfDeltaT, scaledSources;
-let gamma;
+```{.typescript #adi-variables}
+let WIDTH: number;
+let HEIGHT: number;
+let modifiedUpperDiagonal1: Float64Array, modifiedRightHandSide1: Float64Array, solution1: Float64Array;
+let modifiedUpperDiagonal2: Float64Array, modifiedRightHandSide2: Float64Array, solution2: Float64Array;
+let intermediateConcentration: Float64Array;
+let a1: Float64Array, b1: Float64Array, c1: Float64Array, d1: Float64Array;
+let a2: Float64Array, b2: Float64Array, c2: Float64Array, d2: Float64Array;
+let alpha: number, halfDeltaT: number, scaledSources: Float64Array;
+let gamma: Float64Array;
 ```
 
 ## Initialising the ADI arrays
@@ -42,14 +42,14 @@ let gamma;
 the grid size and calls `initADIArrays` to allocate all working storage
 and compute the constant `alpha = D Δt / (2 Δx²)`.
 
-```{.javascript #adi-set-properties}
+```{.typescript #adi-set-properties}
 export const setADIProperties = (
-    width,
-    height,
-    diffusionCoefficient,
-    deltaX,
-    deltaT,
-) => {
+    width: number,
+    height: number,
+    diffusionCoefficient: number,
+    deltaX: number,
+    deltaT: number,
+): void => {
     WIDTH = width;
     HEIGHT = height;
     ({
@@ -82,9 +82,9 @@ Before each call to `ADI` (or whenever the source/sink arrays change),
 `updateSinksAndSources` pre‑scales the source and sink terms so that they
 can be added directly to the right‑hand side during the sweeps.
 
-```{.javascript #adi-update-sinks-sources}
-export const updateSinksAndSources = (sinks, sources) => {
-    for (let i = 0; i < WIDTH * HEIGHT; i++) {
+```{.typescript #adi-update-sinks-sources}
+export const updateSinksAndSources = (sinks: Float64Array, sources: Float64Array): void => {
+    for (let i: number = 0; i < WIDTH * HEIGHT; i++) {
         gamma[i] = (sinks[i] * halfDeltaT) / 2;
         scaledSources[i] = sources[i] * halfDeltaT;
     }
@@ -98,11 +98,11 @@ tridiagonal system must be rebuilt for every row (x‑sweep) or column
 (y‑sweep). Neumann (zero‑flux) boundary conditions are enforced by
 adjusting the first and last diagonal entries.
 
-```{.javascript #adi-update-diagonal-x}
-const updateMainDiagonalXstep = (yCoord) => {
+```{.typescript #adi-update-diagonal-x}
+const updateMainDiagonalXstep = (yCoord: number): void => {
     //update b1
-    for (let i = 0; i < WIDTH; i++) {
-        const idx = yCoord * WIDTH + i;
+    for (let i: number = 0; i < WIDTH; i++) {
+        const idx: number = yCoord * WIDTH + i;
         b1[i] = 1 + 2 * alpha + gamma[idx];
     }
     //boundary conditions
@@ -111,11 +111,11 @@ const updateMainDiagonalXstep = (yCoord) => {
 }
 ```
 
-```{.javascript #adi-update-diagonal-y}
-const updateMainDiagonalYstep = (xCoord) => {
+```{.typescript #adi-update-diagonal-y}
+const updateMainDiagonalYstep = (xCoord: number): void => {
     //update b2
-    for (let j = 0; j < HEIGHT; j++) {
-        const idx = j * WIDTH + xCoord;
+    for (let j: number = 0; j < HEIGHT; j++) {
+        const idx: number = j * WIDTH + xCoord;
         b2[j] = 1 + 2 * alpha + gamma[idx];
     }
     //boundary conditions
@@ -134,32 +134,32 @@ etc.) implements Neumann boundary conditions for the explicit part.
 If a negative concentration appears and `allowNegativeValues` is `false`,
 the function logs a warning and returns `null`.
 
-```{.javascript #adi-main-function}
+```{.typescript #adi-main-function}
 export const ADI = (
-    concentrationData,
-    totalNumberOfIterations,
-    allowNegativeValues = false
-) => {
-    let reachedNegativeValue = false;
+    concentrationData: Float64Array,
+    totalNumberOfIterations: number,
+    allowNegativeValues: boolean = false,
+): Float64Array | null => {
+    let reachedNegativeValue: boolean = false;
 
-    const currentConcentrationData = concentrationData;
+    const currentConcentrationData: Float64Array = concentrationData;
 
-    for (let iteration = 0; iteration < totalNumberOfIterations; iteration++) {
+    for (let iteration: number = 0; iteration < totalNumberOfIterations; iteration++) {
         /////////////-----  FIRST HALF-STEP (X-sweep)  -----/////////////
         // Solve implicitly in x, explicitly in y.
         // Clamped indexing implements Neumann (zero-flux) BCs in y:
         //   jBelow = max(j-1, 0),  jAbove = min(j+1, HEIGHT-1)
-        for (let j = 0; j < HEIGHT; j++) {
-            const jBelow = j > 0 ? j - 1 : 0;
-            const jAbove = j < HEIGHT - 1 ? j + 1 : HEIGHT - 1;
-            const rowOffset = j * WIDTH;
+        for (let j: number = 0; j < HEIGHT; j++) {
+            const jBelow: number = j > 0 ? j - 1 : 0;
+            const jAbove: number = j < HEIGHT - 1 ? j + 1 : HEIGHT - 1;
+            const rowOffset: number = j * WIDTH;
 
-            for (let i = 0; i < WIDTH; i++) {
-                const idx = rowOffset + i;
+            for (let i: number = 0; i < WIDTH; i++) {
+                const idx: number = rowOffset + i;
 
-                const center = currentConcentrationData[idx];
-                const bottom = currentConcentrationData[jBelow * WIDTH + i];
-                const top = currentConcentrationData[jAbove * WIDTH + i];
+                const center: number = currentConcentrationData[idx];
+                const bottom: number = currentConcentrationData[jBelow * WIDTH + i];
+                const top: number = currentConcentrationData[jAbove * WIDTH + i];
 
                 d1[i] =
                     alpha * bottom +
@@ -177,10 +177,10 @@ export const ADI = (
                 WIDTH,
                 modifiedUpperDiagonal1,
                 modifiedRightHandSide1,
-                solution1
+                solution1,
             );
 
-            for (let i = 0; i < WIDTH; i++) {
+            for (let i: number = 0; i < WIDTH; i++) {
                 intermediateConcentration[rowOffset + i] = solution1[i];
             }
         }
@@ -189,17 +189,17 @@ export const ADI = (
         // Solve implicitly in y, explicitly in x.
         // Clamped indexing implements Neumann (zero-flux) BCs in x:
         //   iLeft = max(i-1, 0),  iRight = min(i+1, WIDTH-1)
-        for (let i = 0; i < WIDTH; i++) {
-            const iLeft = i > 0 ? i - 1 : 0;
-            const iRight = i < WIDTH - 1 ? i + 1 : WIDTH - 1;
+        for (let i: number = 0; i < WIDTH; i++) {
+            const iLeft: number = i > 0 ? i - 1 : 0;
+            const iRight: number = i < WIDTH - 1 ? i + 1 : WIDTH - 1;
 
-            for (let j = 0; j < HEIGHT; j++) {
-                const rowOffset = j * WIDTH;
-                const idx = rowOffset + i;
+            for (let j: number = 0; j < HEIGHT; j++) {
+                const rowOffset: number = j * WIDTH;
+                const idx: number = rowOffset + i;
 
-                const center = intermediateConcentration[idx];
-                const left = intermediateConcentration[rowOffset + iLeft];
-                const right = intermediateConcentration[rowOffset + iRight];
+                const center: number = intermediateConcentration[idx];
+                const left: number = intermediateConcentration[rowOffset + iLeft];
+                const right: number = intermediateConcentration[rowOffset + iRight];
 
                 d2[j] =
                     alpha * left +
@@ -217,11 +217,11 @@ export const ADI = (
                 HEIGHT,
                 modifiedUpperDiagonal2,
                 modifiedRightHandSide2,
-                solution2
+                solution2,
             );
 
-            for (let j = 0; j < HEIGHT; j++) {
-                const pos = j * WIDTH + i;
+            for (let j: number = 0; j < HEIGHT; j++) {
+                const pos: number = j * WIDTH + i;
                 if (solution2[j] < 0) {
                     reachedNegativeValue = true;
                 }
@@ -245,12 +245,21 @@ arrays for a single sweep. It fills the lower, main, and upper diagonals
 with the appropriate values and applies Neumann boundary conditions by
 adjusting the first and last entries.
 
-```{.javascript #adi-init-arrays}
-const generateDiagonals = (length, alpha, gamma) => {
-    const lowerDiagonal = new Float64Array(length).fill(-alpha);
-    const mainDiagonal = new Float64Array(length).fill(1 + 2 * alpha + gamma);
-    const upperDiagonal = new Float64Array(length).fill(-alpha);
-    const rightHandSide = new Float64Array(length);
+```{.typescript #adi-init-arrays}
+const generateDiagonals = (
+    length: number,
+    alpha: number,
+    gamma: number,
+): {
+    lowerDiagonal: Float64Array;
+    mainDiagonal: Float64Array;
+    upperDiagonal: Float64Array;
+    rightHandSide: Float64Array;
+} => {
+    const lowerDiagonal: Float64Array = new Float64Array(length).fill(-alpha);
+    const mainDiagonal: Float64Array = new Float64Array(length).fill(1 + 2 * alpha + gamma);
+    const upperDiagonal: Float64Array = new Float64Array(length).fill(-alpha);
+    const rightHandSide: Float64Array = new Float64Array(length);
     mainDiagonal[0] = 1 + alpha + gamma;
     mainDiagonal[length - 1] = 1 + alpha + gamma;
     lowerDiagonal[0] = 0;
@@ -264,20 +273,46 @@ solver and pre‑computes the constant `alpha`. It returns an object with
 all the arrays and constants, which `setADIProperties` destructures into
 the module‑level variables.
 
-```{.javascript #adi-init-arrays}
-export const initADIArrays = (WIDTH, HEIGHT, DIFFUSION_RATE, deltaX, deltaT) => {
-    const modifiedUpperDiagonal1 = new Float64Array(WIDTH);
-    const modifiedRightHandSide1 = new Float64Array(WIDTH);
-    const solution1 = new Float64Array(WIDTH);
-    const modifiedUpperDiagonal2 = new Float64Array(HEIGHT);
-    const modifiedRightHandSide2 = new Float64Array(HEIGHT);
-    const solution2 = new Float64Array(HEIGHT);
-    const intermediateConcentration = new Float64Array(WIDTH * HEIGHT);
-    const scaledSources = new Float64Array(WIDTH * HEIGHT);
-    const gamma = new Float64Array(WIDTH * HEIGHT).fill(0);
+```{.typescript #adi-init-arrays}
+export const initADIArrays = (
+    WIDTH: number,
+    HEIGHT: number,
+    DIFFUSION_RATE: number,
+    deltaX: number,
+    deltaT: number,
+): {
+    modifiedUpperDiagonal1: Float64Array;
+    modifiedRightHandSide1: Float64Array;
+    solution1: Float64Array;
+    modifiedUpperDiagonal2: Float64Array;
+    modifiedRightHandSide2: Float64Array;
+    solution2: Float64Array;
+    intermediateConcentration: Float64Array;
+    a1: Float64Array;
+    b1: Float64Array;
+    c1: Float64Array;
+    d1: Float64Array;
+    a2: Float64Array;
+    b2: Float64Array;
+    c2: Float64Array;
+    d2: Float64Array;
+    alpha: number;
+    halfDeltaT: number;
+    scaledSources: Float64Array;
+    gamma: Float64Array;
+} => {
+    const modifiedUpperDiagonal1: Float64Array = new Float64Array(WIDTH);
+    const modifiedRightHandSide1: Float64Array = new Float64Array(WIDTH);
+    const solution1: Float64Array = new Float64Array(WIDTH);
+    const modifiedUpperDiagonal2: Float64Array = new Float64Array(HEIGHT);
+    const modifiedRightHandSide2: Float64Array = new Float64Array(HEIGHT);
+    const solution2: Float64Array = new Float64Array(HEIGHT);
+    const intermediateConcentration: Float64Array = new Float64Array(WIDTH * HEIGHT);
+    const scaledSources: Float64Array = new Float64Array(WIDTH * HEIGHT);
+    const gamma: Float64Array = new Float64Array(WIDTH * HEIGHT).fill(0);
 
-    const alpha = (DIFFUSION_RATE * deltaT) / (2 * deltaX * deltaX);
-    const gammaPoint = 0;
+    const alpha: number = (DIFFUSION_RATE * deltaT) / (2 * deltaX * deltaX);
+    const gammaPoint: number = 0;
     const {
         lowerDiagonal: a1,
         mainDiagonal: b1,
@@ -290,7 +325,7 @@ export const initADIArrays = (WIDTH, HEIGHT, DIFFUSION_RATE, deltaX, deltaT) => 
         upperDiagonal: c2,
         rightHandSide: d2,
     } = generateDiagonals(HEIGHT, alpha, gammaPoint);
-    const halfDeltaT = deltaT / 2;
+    const halfDeltaT: number = deltaT / 2;
     return {
         modifiedUpperDiagonal1,
         modifiedRightHandSide1,
@@ -320,7 +355,7 @@ export const initADIArrays = (WIDTH, HEIGHT, DIFFUSION_RATE, deltaX, deltaT) => 
 The final code block tells Entangled to write the file `src/adi.js` by
 concatenating all the pieces defined above:
 
-```{.javascript file=src/adi.js}
+```{.typescript file=src/adi.ts}
 <<adi-imports>>
 
 <<adi-variables>>
