@@ -33,6 +33,7 @@ Thumbs.db
 .aider*
 
 # Everything related to python virtual environments and package managers and cache
+.venv/
 venv/
 __pycache__/
 
