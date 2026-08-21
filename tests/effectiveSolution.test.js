@@ -1,7 +1,4 @@
-import {
-    analyticSteadyState,
-    effectiveInfluence,
-} from "handy-diffusion";
+import { analyticSteadyState, effectiveInfluence } from "handy-diffusion";
 import { describe, test, expect } from "vitest";
 import { createRandomSources } from "./src/helpers.js";
 import { mulberry32 } from "./random.js";
@@ -126,16 +123,16 @@ describe("effective solution approximates the analytic steady state", () => {
     });
 
     test("the calibrated field stays close on the reference layout", () => {
-        expect(baseline.rms).toBeLessThan(0.10);
+        expect(baseline.rms).toBeLessThan(0.1);
         expect(baseline.q95).toBeLessThan(0.25);
-        expect(baseline.largest).toBeLessThan(0.40);
+        expect(baseline.largest).toBeLessThan(0.4);
     });
 
     test("the fit generalises across independent source layouts", () => {
         for (const seed of testSeeds) {
             const { sources, analytic } = withAnalyticField(seed);
             const m = relativeErrors(sources, analytic, LAMBDA);
-            expect(m.rms).toBeLessThan(0.10);
+            expect(m.rms).toBeLessThan(0.1);
             expect(m.q95).toBeLessThan(0.25);
             expect(m.largest).toBeLessThan(0.45);
         }

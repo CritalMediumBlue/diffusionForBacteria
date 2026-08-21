@@ -27,11 +27,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Entangled
+        run: pip install entangled-cli
+
+      - name: Generate source files
+        run: entangled
+
+      - name: Set up Quarto
+        if: matrix.node-version == '22.x'
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Build Quarto site
+        if: matrix.node-version == '22.x'
+        run: quarto render literate/
+
       - name: Run linter
         run: npm run lint
 
-      - name: Run prettier
-        run: npm run format
+      - name: Check formatting
+        run: npm run format:check
 
       - name: Run tests
         run: npm test
