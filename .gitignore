@@ -3,8 +3,8 @@
 src/
 node_modules/
 coverage/
-.entangled/
 docs/
+.entangled/
 dist/
 build/
 test-plots/

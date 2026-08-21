@@ -11,7 +11,7 @@ import {
     checkForSteadyState,
     convertTo2D,
     calculateDifference,
-} from "../src/helpers.js";
+} from "../src/helpers.ts";
 
 const width = 100;
 const height = 100;

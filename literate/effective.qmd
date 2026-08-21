@@ -15,7 +15,7 @@ The overall shape of the file is laid out with a noweb reference (the
 Entangled weaves the pieces back together into the file `src/effective.js`
 when you run `entangled tangle`.
 
-```{.javascript file=src/effective.js}
+```{.typescript file=src/effective.ts}
 <<effective-function>>
 ```
 
@@ -125,7 +125,7 @@ used throughout the package: cells are stored in row-major order in flat
 `Float64Array`s, so the linear index for grid position `(i, j)` is
 `j * width + i`.
 
-```{.javascript #effective-function}
+```{.typescript #effective-function}
 /**
  * Compute the effective influence of sources on a grid using a
  * distance-weighted exponential kernel.
@@ -137,48 +137,54 @@ used throughout the package: cells are stored in row-major order in flat
  * @param {number} scale  - Multiplier applied to the normalised influence
  * @returns {Float64Array} Flat array of effective influence per cell
  */
-export const effectiveInfluence = (width, height, sources, lambda, scale) => {
-    const effectiveInfluenceArray = new Float64Array(width * height).fill(0);
+export const effectiveInfluence = (
+    width: number,
+    height: number,
+    sources: Float64Array,
+    lambda: number,
+    scale: number,
+): Float64Array => {
+    const effectiveInfluenceArray: Float64Array = new Float64Array(width * height).fill(0);
 
     // Distance cutoff: beyond 5*lambda, exp(-5) ≈ 0.007 (negligible)
-    const cutoffDistance = lambda * 5;
-    const cutoffDistanceSq = cutoffDistance * cutoffDistance;
+    const cutoffDistance: number = lambda * 5;
+    const cutoffDistanceSq: number = cutoffDistance * cutoffDistance;
 
     // For each target cell
-    for (let j = 0; j < height; j++) {
-        for (let i = 0; i < width; i++) {
-            const targetX = i + 0.5;
-            const targetY = j + 0.5;
+    for (let j: number = 0; j < height; j++) {
+        for (let i: number = 0; i < width; i++) {
+            const targetX: number = i + 0.5;
+            const targetY: number = j + 0.5;
 
-            let localInfluence = 0;
-            let totalInfluence = 0;
+            let localInfluence: number = 0;
+            let totalInfluence: number = 0;
 
             // Single pass through all cells
-            for (let jj = 0; jj < height; jj++) {
-                for (let ii = 0; ii < width; ii++) {
-                    const cellX = ii + 0.5;
-                    const cellY = jj + 0.5;
-                    const dx = cellX - targetX;
-                    const dy = cellY - targetY;
-                    const distSq = dx * dx + dy * dy;
+            for (let jj: number = 0; jj < height; jj++) {
+                for (let ii: number = 0; ii < width; ii++) {
+                    const cellX: number = ii + 0.5;
+                    const cellY: number = jj + 0.5;
+                    const dx: number = cellX - targetX;
+                    const dy: number = cellY - targetY;
+                    const distSq: number = dx * dx + dy * dy;
 
                     // Apply distance cutoff
                     if (distSq > cutoffDistanceSq) continue;
 
-                    const distance = Math.sqrt(distSq);
-                    const influence = Math.exp(-distance / lambda);
+                    const distance: number = Math.sqrt(distSq);
+                    const influence: number = Math.exp(-distance / lambda);
 
                     totalInfluence += influence;
 
                     // Check if this cell is a source
-                    const cellIdx = jj * width + ii;
+                    const cellIdx: number = jj * width + ii;
                     if (sources[cellIdx] !== 0) {
                         localInfluence += sources[cellIdx] * influence;
                     }
                 }
             }
 
-            const idx = j * width + i;
+            const idx: number = j * width + i;
             effectiveInfluenceArray[idx] = totalInfluence > 0 ?
                 scale * localInfluence / totalInfluence : 0;
         }

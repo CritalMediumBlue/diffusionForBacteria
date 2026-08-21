@@ -1,7 +1,7 @@
 # Helper functions
 
 This module provides utility functions for the diffusion package. Rather than
-maintaining one monolithic file, we build `helpers.js` from several small,
+maintaining one monolithic file, we build `helpers.ts` from several small,
 named pieces. Each piece is explained in prose immediately before or after
 the code, and Entangled weaves them back together into a single file when
 you run `entangled tangle`.
@@ -10,7 +10,7 @@ The overall shape of the file is laid out first, using noweb references
 (the `<<...>>` markers) as placeholders for content defined later in this
 document.
 
-```{.javascript file=src/helpers.js}
+```{.typescript file=src/helpers.ts}
 <<helpers-random-generators>>
 
 <<helpers-steady-state>>
@@ -33,12 +33,17 @@ marked with `1.0` and inactive cells with `0.0`. Cells are stored in
 row-major order, so the linear index for grid position `(i, j)` is
 `j * width + i`.
 
-```{.javascript #helpers-random-generators}
-export const createRandomSources = (width, height, probability, rng = Math.random) => {
+```{.typescript #helpers-random-generators}
+export const createRandomSources = (
+    width: number,
+    height: number,
+    probability: number,
+    rng: () => number = Math.random,
+): Float64Array => {
     const sources = new Float64Array(width * height);
-    for (let j = 0; j < height; j++) {
-        for (let i = 0; i < width; i++) {
-            const idx = j * width + i;
+    for (let j: number = 0; j < height; j++) {
+        for (let i: number = 0; i < width; i++) {
+            const idx: number = j * width + i;
             sources[idx] = rng() < probability ? 1.0 : 0.0;
         }
     }
@@ -58,11 +63,15 @@ changing meaningfully between iterations, the simulation has converged.
 returns `true` once the largest absolute difference between them drops
 below a `tolerance` threshold (default `1e-5`).
 
-```{.javascript #helpers-steady-state}
-export const checkForSteadyState = (prev, current, tolerance = 1e-5) => {
-    let maxDiff = 0;
-    for (let i = 0; i < prev.length; i++) {
-        const diff = Math.abs(current[i] - prev[i]);
+```{.typescript #helpers-steady-state}
+export const checkForSteadyState = (
+    prev: Float64Array,
+    current: Float64Array,
+    tolerance: number = 1e-5,
+): boolean => {
+    let maxDiff: number = 0;
+    for (let i: number = 0; i < prev.length; i++) {
+        const diff: number = Math.abs(current[i] - prev[i]);
         if (diff > maxDiff) {
             maxDiff = diff;
         }
@@ -83,13 +92,17 @@ plotting libraries like Plotly expect nested arrays (a 2D matrix).
 an array of rows, undoing the same `j * width + i` indexing scheme used
 when the arrays were created.
 
-```{.javascript #helpers-grid-conversion}
+```{.typescript #helpers-grid-conversion}
 // Convert 1D arrays to 2D matrices for Plotly
-export const convertTo2D = (array, width, height) => {
-    const matrix = [];
-    for (let j = 0; j < height; j++) {
-        const row = [];
-        for (let i = 0; i < width; i++) {
+export const convertTo2D = (
+    array: Float64Array,
+    width: number,
+    height: number,
+): number[][] => {
+    const matrix: number[][] = [];
+    for (let j: number = 0; j < height; j++) {
+        const row: number[] = [];
+        for (let i: number = 0; i < width; i++) {
             row.push(array[j * width + i]);
         }
         matrix.push(row);
@@ -106,11 +119,14 @@ solutions diverge — for example, comparing a numerical solution against an
 analytic one to check accuracy, or comparing two different solver methods
 against each other.
 
-```{.javascript #helpers-grid-difference}
+```{.typescript #helpers-grid-difference}
 // Compute and display difference
-export const calculateDifference = (grid1, grid2) => {
+export const calculateDifference = (
+    grid1: Float64Array,
+    grid2: Float64Array,
+): Float64Array => {
     const difference = new Float64Array(grid1.length);
-    for (let i = 0; i < grid1.length; i++) {
+    for (let i: number = 0; i < grid1.length; i++) {
         difference[i] = Math.abs(grid1[i] - grid2[i]);
     }
     return difference;

@@ -18,13 +18,13 @@ we define a tolerance. If a pivot’s absolute value falls below this
 threshold, it is replaced by the tolerance (with the original sign) so
 that the algorithm can continue without a hard crash.
 
-```{.javascript #thomas-tolerance}
+```{.typescript #thomas-tolerance}
 /**
  * Numerical tolerance for pivot detection to prevent division by zero.
  * MATLAB and other solver documentation recommend tolerances around 1e-10.
  * @constant {number}
  */
-const tolerance = 1e-10;
+const tolerance: number = 1e-10;
 ```
 
 ## Function signature and documentation
@@ -34,7 +34,7 @@ The function accepts the three diagonals (`lowerDiagonal`, `mainDiagonal`,
 three pre‑allocated work arrays. The solution is written directly into
 the `solution` array.
 
-```{.javascript #thomas-signature}
+```{.typescript #thomas-signature}
 /**
  * Solves a tridiagonal system of linear equations using the Thomas algorithm.
  *
@@ -94,15 +94,15 @@ the `solution` array.
  *
  */
 export function thomasAlgorithm(
-    lowerDiagonal,
-    mainDiagonal,
-    upperDiagonal,
-    rightHandSide,
-    n,
-    modifiedUpperDiagonal,
-    modifiedRightHandSide,
-    solution
-) {
+    lowerDiagonal: Float64Array,
+    mainDiagonal: Float64Array,
+    upperDiagonal: Float64Array,
+    rightHandSide: Float64Array,
+    n: number,
+    modifiedUpperDiagonal: Float64Array,
+    modifiedRightHandSide: Float64Array,
+    solution: Float64Array,
+): void {
 ```
 
 ## Forward elimination
@@ -112,7 +112,7 @@ triangular form. For each row `i`, we eliminate the sub‑diagonal element
 `aᵢ` using the modified upper diagonal from the previous row. The pivot
 is checked against the tolerance to avoid division by zero.
 
-```{.javascript #thomas-forward}
+```{.typescript #thomas-forward}
     // =====================================================================
     // FORWARD ELIMINATION PHASE
     // =====================================================================
@@ -121,33 +121,33 @@ is checked against the tolerance to avoid division by zero.
 
     // Handle the first row (i = 0)
     // Check for near-zero pivot to prevent numerical instability
-    let pivot = mainDiagonal[0];
+    let pivot: number = mainDiagonal[0];
     if (Math.abs(pivot) < tolerance) {
         // Replace near-zero pivot with tolerance to avoid division by zero
         pivot = pivot >= 0 ? tolerance : -tolerance;
     }
-    const invPivot = 1.0 / pivot;
+    const invPivot: number = 1.0 / pivot;
 
     // Normalize first row: divide upper diagonal and RHS by pivot
     modifiedUpperDiagonal[0] = upperDiagonal[0] * invPivot;
     modifiedRightHandSide[0] = rightHandSide[0] * invPivot;
 
     // Process remaining rows (i = 1 to n-1)
-    for (let i = 1; i < n; i++) {
-        const l_i = lowerDiagonal[i]; // Lower diagonal element at row i
-        const u_prime_prev = modifiedUpperDiagonal[i - 1]; // Modified upper diagonal from previous row
-        const d_prime_prev = modifiedRightHandSide[i - 1]; // Modified RHS from previous row
+    for (let i: number = 1; i < n; i++) {
+        const l_i: number = lowerDiagonal[i]; // Lower diagonal element at row i
+        const u_prime_prev: number = modifiedUpperDiagonal[i - 1]; // Modified upper diagonal from previous row
+        const d_prime_prev: number = modifiedRightHandSide[i - 1]; // Modified RHS from previous row
 
         // Calculate the new diagonal element after eliminating lower diagonal
         // This is: b_i - a_i * c'_{i-1}
-        let currentDenominator = mainDiagonal[i] - l_i * u_prime_prev;
+        let currentDenominator: number = mainDiagonal[i] - l_i * u_prime_prev;
 
         // Check for near-zero denominator to prevent numerical instability
         if (Math.abs(currentDenominator) < tolerance) {
             // Replace near-zero denominator with tolerance to avoid division by zero
             currentDenominator = currentDenominator >= 0 ? tolerance : -tolerance;
         }
-        const invDenominator = 1.0 / currentDenominator;
+        const invDenominator: number = 1.0 / currentDenominator;
 
         // Update modified arrays for current row
         // Modified upper diagonal: c_i / (b_i - a_i * c'_{i-1})
@@ -163,7 +163,7 @@ Once the matrix is upper triangular, the solution is obtained by
 back‑substitution. The last unknown is already isolated, and we work
 backwards to compute the remaining values.
 
-```{.javascript #thomas-backward}
+```{.typescript #thomas-backward}
     // =====================================================================
     // BACKWARD SUBSTITUTION PHASE
     // =====================================================================
@@ -173,7 +173,7 @@ backwards to compute the remaining values.
     solution[n - 1] = modifiedRightHandSide[n - 1];
 
     // Solve remaining equations working backwards
-    for (let i = n - 2; i >= 0; i--) {
+    for (let i: number = n - 2; i >= 0; i--) {
         // x_i = d'_i - c'_i * x_{i+1}
         solution[i] = modifiedRightHandSide[i] - modifiedUpperDiagonal[i] * solution[i + 1];
     }
@@ -183,9 +183,9 @@ backwards to compute the remaining values.
 ## Assembling the module
 
 The final code block tells Entangled to write the file
-`src/thomasAlgorithm.js` by concatenating all the pieces defined above.
+`src/thomasAlgorithm.ts` by concatenating all the pieces defined above.
 
-```{.javascript file=src/thomasAlgorithm.js}
+```{.typescript file=src/thomasAlgorithm.ts}
 <<thomas-tolerance>>
 
 <<thomas-signature>>
