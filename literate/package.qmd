@@ -1,0 +1,155 @@
+# Package entry points
+
+## Barrel export (`src/index.js`)
+
+```{.javascript file=src/index.js}
+// ~/~ begin <<literate/package.qmd#barrel>>[init]
+// Import and re-export ADI functions
+export { ADI, setADIProperties, updateSinksAndSources } from './adi.js';
+
+// Import and re-export Crank-Nicolson functions
+export { CrankNicolson, setCNProperties } from './crankNicolson.js';
+
+// Import and re-export analytic solution
+export { analyticSteadyState } from './analyticSolution.js';
+
+// Import and re-export effective influence
+export { effectiveInfluence } from './effective.js';
+
+// Import and re-export thomas algorithm
+export { thomasAlgorithm } from './thomasAlgorithm.js';
+// ~/~ end
+```
+
+## TypeScript declarations (`src/index.d.ts`)
+
+```{.javascript file=src/index.d.ts}
+// ~/~ begin <<literate/package.qmd#types>>[init]
+/**
+ * Type definitions for handy-diffusion (corrected to match actual implementations)
+ */
+
+/**
+ * Set properties for the ADI (Alternating Direction Implicit) method
+ * @param width - Grid width
+ * @param height - Grid height
+ * @param diffusionCoefficient - Diffusion coefficient
+ * @param deltaX - Spatial step size
+ * @param deltaT - Time step size
+ */
+export function setADIProperties(
+	width: number,
+	height: number,
+	diffusionCoefficient: number,
+	deltaX: number,
+	deltaT: number,
+): void;
+
+/**
+ * Solve 2D diffusion equation using ADI method
+ * @param concentrationData - Concentration array (width * height)
+ * @param totalNumberOfIterations - Number of time steps
+ * @param allowNegativeValues - Whether to allow negative concentrations (default: false)
+ */
+export function ADI(
+	concentrationData: Float64Array,
+	totalNumberOfIterations: number,
+	allowNegativeValues?: boolean,
+): Float64Array | null;
+
+/**
+ * Set properties for the Crank-Nicolson method (1D)
+ * @param length - Number of grid points
+ * @param diffusionCoefficient - Diffusion coefficient
+ * @param deltaX - Spatial step size
+ * @param deltaT - Time step size
+ * @param decayRate - Decay rate constant (default: 0)
+ */
+export function setCNProperties(
+	length: number,
+	diffusionCoefficient: number,
+	deltaX: number,
+	deltaT: number,
+	decayRate?: number
+): void;
+
+/**
+ * Solve 1D diffusion equation using Crank-Nicolson method
+ * @param concentrationData - Initial concentration values
+ * @param sources - Source terms
+ * @param totalNumberOfIterations - Number of time steps
+ * @param allowNegativeValues - Whether to allow negative concentrations (default: false)
+ */
+export function CrankNicolson(
+	concentrationData: Float64Array,
+	sources: Float64Array,
+	totalNumberOfIterations: number,
+	allowNegativeValues?: boolean,
+): void;
+
+/**
+ * Calculate analytic steady-state solution
+ * @param WIDTH - Grid width
+ * @param HEIGHT - Grid height
+ * @param DIFFUSION_RATE - Diffusion rate
+ * @param DECAY_RATE - Decay rate
+ * @param deltaX - Spatial step size
+ * @param sources - Source terms array
+ * @param maxMode - Maximum mode for series expansion
+ * @returns Steady-state concentration array
+ */
+export function analyticSteadyState(
+	WIDTH: number,
+	HEIGHT: number,
+	DIFFUSION_RATE: number,
+	DECAY_RATE: number,
+	deltaX: number,
+	sources: Float64Array,
+	maxMode: number,
+): Float64Array;
+
+/**
+ * Calculate effective influence of sources
+ * @param width - Grid width
+ * @param height - Grid height
+ * @param sources - Source terms array
+ * @param lambda - Length scale parameter
+ * @param scale - Scaling factor
+ * @returns Effective influence array
+ */
+export function effectiveInfluence(
+	width: number,
+	height: number,
+	sources: Float64Array,
+	lambda: number,
+	scale: number,
+): Float64Array;
+
+/**
+ * Solve tridiagonal system using Thomas algorithm
+ * @param a - Sub-diagonal coefficients
+ * @param b - Main diagonal coefficients
+ * @param c - Super-diagonal coefficients
+ * @param d - Right-hand side vector
+ * @param n - System size
+ * @param modifiedUpperDiagonal - Pre-allocated work array
+ * @param modifiedRightHandSide - Pre-allocated work array
+ * @param solution - Pre-allocated output array (written in place)
+ */
+export function thomasAlgorithm(
+	lowerDiagonal: Float64Array,
+	mainDiagonal: Float64Array,
+	upperDiagonal: Float64Array,
+	rightHandSide: Float64Array,
+	n: number,
+	modifiedUpperDiagonal: Float64Array,
+	modifiedRightHandSide: Float64Array,
+	solution: Float64Array,
+): void;
+
+export function updateSinksAndSources(
+	sinks: Float64Array,
+	sources: Float64Array,
+): void;
+// ~/~ end
+```
