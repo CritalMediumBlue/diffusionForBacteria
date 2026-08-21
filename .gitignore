@@ -4,6 +4,7 @@ src/
 node_modules/
 coverage/
 docs/
+.entangled/
 dist/
 build/
 test-plots/
