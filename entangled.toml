@@ -10,3 +10,8 @@ comment = { open = "//" }
 name = "Observable JavaScript"
 identifiers = ["ojs"]
 comment = { open = "//" }
+
+[[languages]]
+name = "TypeScript"
+identifiers = ["typescript", "ts"]
+comment = { open = "//" }
