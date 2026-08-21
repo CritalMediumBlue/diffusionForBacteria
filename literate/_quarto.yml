@@ -7,6 +7,7 @@ book:
   author: "Norah Jones"
   date: "8/20/2026"
   chapters:
+    - package.qmd
     - index.qmd
     - adi.qmd
     - crankNicolson.qmd

@@ -1,10 +1,14 @@
+// ~/~ begin <<literate/thomasAlgorithm.qmd#src/thomasAlgorithm.js>>[init]
+// ~/~ begin <<literate/thomasAlgorithm.qmd#thomas-tolerance>>[init]
 /**
  * Numerical tolerance for pivot detection to prevent division by zero.
  * MATLAB and other solver documentation recommend tolerances around 1e-10.
  * @constant {number}
  */
 const tolerance = 1e-10;
+// ~/~ end
 
+// ~/~ begin <<literate/thomasAlgorithm.qmd#thomas-signature>>[init]
 /**
  * Solves a tridiagonal system of linear equations using the Thomas algorithm.
  *
@@ -73,6 +77,8 @@ export function thomasAlgorithm(
     modifiedRightHandSide,
     solution
 ) {
+// ~/~ end
+// ~/~ begin <<literate/thomasAlgorithm.qmd#thomas-forward>>[init]
     // =====================================================================
     // FORWARD ELIMINATION PHASE
     // =====================================================================
@@ -115,7 +121,8 @@ export function thomasAlgorithm(
         // Modified RHS: (d_i - a_i * d'_{i-1}) / (b_i - a_i * c'_{i-1})
         modifiedRightHandSide[i] = (rightHandSide[i] - l_i * d_prime_prev) * invDenominator;
     }
-
+// ~/~ end
+// ~/~ begin <<literate/thomasAlgorithm.qmd#thomas-backward>>[init]
     // =====================================================================
     // BACKWARD SUBSTITUTION PHASE
     // =====================================================================
@@ -130,3 +137,5 @@ export function thomasAlgorithm(
         solution[i] = modifiedRightHandSide[i] - modifiedUpperDiagonal[i] * solution[i + 1];
     }
 }
+// ~/~ end
+// ~/~ end

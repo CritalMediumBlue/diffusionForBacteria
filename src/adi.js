@@ -200,7 +200,8 @@ const generateDiagonals = (length, alpha, gamma) => {
     upperDiagonal[length - 1] = 0;
     return { lowerDiagonal, mainDiagonal, upperDiagonal, rightHandSide };
 };
-
+// ~/~ end
+// ~/~ begin <<literate/adi.qmd#adi-init-arrays>>[1]
 export const initADIArrays = (WIDTH, HEIGHT, DIFFUSION_RATE, deltaX, deltaT) => {
     const modifiedUpperDiagonal1 = new Float64Array(WIDTH);
     const modifiedRightHandSide1 = new Float64Array(WIDTH);

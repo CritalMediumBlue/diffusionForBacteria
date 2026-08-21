@@ -1,3 +1,5 @@
+// ~/~ begin <<literate/package.qmd#src/index.d.ts>>[init]
+// ~/~ begin <<literate/package.qmd#types>>[init]
 /**
  * Type definitions for handy-diffusion (corrected to match actual implementations)
  */
@@ -124,3 +126,5 @@ export function updateSinksAndSources(
 	sinks: Float64Array,
 	sources: Float64Array,
 ): void;
+// ~/~ end
+// ~/~ end

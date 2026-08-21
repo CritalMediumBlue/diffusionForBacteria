@@ -1,3 +1,5 @@
+// ~/~ begin <<literate/package.qmd#src/index.js>>[init]
+// ~/~ begin <<literate/package.qmd#barrel>>[init]
 // Import and re-export ADI functions
 export { ADI, setADIProperties, updateSinksAndSources } from './adi.js';
 
@@ -12,4 +14,5 @@ export { effectiveInfluence } from './effective.js';
 
 // Import and re-export thomas algorithm
 export { thomasAlgorithm } from './thomasAlgorithm.js';
-
+// ~/~ end
+// ~/~ end
