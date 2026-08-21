@@ -33,6 +33,14 @@ jobs:
       - name: Generate source files
         run: entangled
 
+      - name: Set up Quarto
+        if: matrix.node-version == '22.x'
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Build Quarto site
+        if: matrix.node-version == '22.x'
+        run: quarto render literate/
+
       - name: Run linter
         run: npm run lint
 
