@@ -1,4 +1,4 @@
-import { analyticSteadyState, effectiveInfluence } from "handy-diffusion";
+import { analyticSteadyState, effectiveInfluence } from "../src/index.js";
 import { describe, test, expect } from "vitest";
 import { createRandomSources } from "./src/helpers.js";
 import { mulberry32 } from "./random.js";

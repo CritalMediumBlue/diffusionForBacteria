@@ -4,7 +4,7 @@ import {
     CrankNicolson,
     setCNProperties,
     updateSinksAndSources,
-} from "handy-diffusion";
+} from "../src/index.js";
 import { expect, test } from "vitest";
 
 const length = 1200;

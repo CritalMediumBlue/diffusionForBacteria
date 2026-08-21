@@ -1,4 +1,4 @@
-import { ADI, setADIProperties, updateSinksAndSources } from "handy-diffusion";
+import { ADI, setADIProperties, updateSinksAndSources } from "../src/index.js";
 
 import { describe, test, expect } from "vitest";
 
