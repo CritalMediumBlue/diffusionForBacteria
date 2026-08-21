@@ -3,6 +3,7 @@
 src/
 node_modules/
 coverage/
+.entangled/
 docs/
 dist/
 build/
