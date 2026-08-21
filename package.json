@@ -3,24 +3,17 @@
     "version": "1.0.15",
     "description": "algorithms to simulate diffusion",
     "type": "module",
-    "main": "./src/index.js",
-    "types": "./src/index.d.ts",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "exports": {
         ".": {
-            "types": "./src/index.d.ts",
-            "import": "./src/index.js",
-            "default": "./src/index.js"
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js",
+            "default": "./dist/index.js"
         }
     },
     "files": [
-        "src/index.js",
-        "src/index.d.ts",
-        "src/adi.js",
-        "src/analyticSolution.js",
-        "src/crankNicolson.js",
-        "src/effective.js",
-        "src/initArrays.js",
-        "src/thomasAlgorithm.js",
+        "dist/",
         "README.md",
         "LICENSE"
     ],
@@ -36,7 +29,9 @@
         "format:check": "prettier --check \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"*.json\" \"*.md\"",
         "docs": "jsdoc -c jsdoc.json",
         "docs:serve": "npx http-server docs -p 8081 -o",
-        "plot": "vite plotting"
+        "plot": "vite plotting",
+        "build": "tsc",
+        "prepublishOnly": "npm run build"
     },
     "repository": {
         "type": "git",
