@@ -11,19 +11,6 @@ export const createRandomSources = (width, height, probability, rng = Math.rando
     return sources;
 };
 // ~/~ end
-// ~/~ begin <<literate/helpers.qmd#helpers-random-generators>>[1]
-
-export const createRandomSinks = (width, height, probability, rng = Math.random) => {
-    const sinks = new Float64Array(width * height);
-    for (let j = 0; j < height; j++) {
-        for (let i = 0; i < width; i++) {
-            const idx = j * width + i;
-            sinks[idx] = rng() < probability ? 0.01 : 0.0; // example sink strength
-        }
-    }
-    return sinks;
-};
-// ~/~ end
 
 // ~/~ begin <<literate/helpers.qmd#helpers-steady-state>>[init]
 export const checkForSteadyState = (prev, current, tolerance = 1e-5) => {

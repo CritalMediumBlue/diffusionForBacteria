@@ -18,11 +18,16 @@
             gap: 0px;
             justify-content: center;
         }
-        #numerical-plot, #analytic-plot, #comparison-plot, #log-comparison-plot, 
-        #effective-plot, #difference-effective-analytic-plot, #log-difference-effective-analytic-plot,
-        #difference-ignoring-sources-plot,
-        
-            #rms-error-plot {
+        #numerical-plot-random, #analytic-plot-random, #comparison-plot-random,
+        #log-comparison-plot-random, #effective-plot-random,
+        #difference-effective-analytic-plot-random,
+        #log-difference-effective-analytic-plot-random,
+        #difference-ignoring-sources-plot-random, #rms-error-plot-random,
+        #numerical-plot-article2d, #analytic-plot-article2d, #comparison-plot-article2d,
+        #log-comparison-plot-article2d, #effective-plot-article2d,
+        #difference-effective-analytic-plot-article2d,
+        #log-difference-effective-analytic-plot-article2d,
+        #difference-ignoring-sources-plot-article2d, #rms-error-plot-article2d {
             flex: 1 1 calc(33.333% - 20px); /* Three columns */
             min-width: 300px; /* Minimum width before wrapping */
             height: 500px;
@@ -30,17 +35,25 @@
     </style>
 </head>
 <body>
-    <h1>Diffusion Algorithm: Numerical vs Analytical vs Effective Solutions</h1>
     <div class="plots-container">
-        <div id="numerical-plot"></div>
-        <div id="analytic-plot"></div>
-        <div id="effective-plot"></div>
-        <div id="comparison-plot"></div>
-        <div id="log-comparison-plot"></div>
-        <div id="difference-effective-analytic-plot"></div>
-        <div id="rms-error-plot"></div>
-        <div id="log-difference-effective-analytic-plot"></div>
-        <div id="difference-ignoring-sources-plot"></div>
+        <div id="numerical-plot-random"></div>
+        <div id="analytic-plot-random"></div>
+        <div id="effective-plot-random"></div>
+        <div id="comparison-plot-random"></div>
+        <div id="log-comparison-plot-random"></div>
+        <div id="difference-effective-analytic-plot-random"></div>
+        <div id="rms-error-plot-random"></div>
+        <div id="log-difference-effective-analytic-plot-random"></div>
+        <div id="difference-ignoring-sources-plot-random"></div>
+        <div id="numerical-plot-article2d"></div>
+        <div id="analytic-plot-article2d"></div>
+        <div id="effective-plot-article2d"></div>
+        <div id="comparison-plot-article2d"></div>
+        <div id="log-comparison-plot-article2d"></div>
+        <div id="difference-effective-analytic-plot-article2d"></div>
+        <div id="rms-error-plot-article2d"></div>
+        <div id="log-difference-effective-analytic-plot-article2d"></div>
+        <div id="difference-ignoring-sources-plot-article2d"></div>
     </div>
 </body>
 </html>

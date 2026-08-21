@@ -46,25 +46,7 @@ export const createRandomSources = (width, height, probability, rng = Math.rando
 };
 ```
 
-`createRandomSinks` follows the identical pattern, but active cells are
-marked with a small strength value (`0.01`) instead of `1.0`, representing
-a gentle, continuous removal rate rather than an on/off source term.
-
-```{.javascript #helpers-random-generators}
-
-export const createRandomSinks = (width, height, probability, rng = Math.random) => {
-    const sinks = new Float64Array(width * height);
-    for (let j = 0; j < height; j++) {
-        for (let i = 0; i < width; i++) {
-            const idx = j * width + i;
-            sinks[idx] = rng() < probability ? 0.01 : 0.0; // example sink strength
-        }
-    }
-    return sinks;
-};
-```
-
-Both functions accept an optional `rng` parameter defaulting to `Math.random`,
+`createRandomSources` accepts an optional `rng` parameter defaulting to `Math.random`,
 which makes them easy to test deterministically by injecting a seeded
 random number generator.
 

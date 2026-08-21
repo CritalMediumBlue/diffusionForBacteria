@@ -1,0 +1,200 @@
+# Effective Influence
+
+For a field of sources, the *effective influence* at a grid point measures
+how much the surrounding sources affect that location. Each source
+contributes to its neighbours by an amount that decays smoothly with
+distance — here modelled by an exponential kernel `exp(-distance / lambda)`,
+where `lambda` sets the characteristic range of influence.
+
+The module exports a single function, `effectiveInfluence`, which walks
+every cell in a `width` × `height` grid and computes that weighted
+contribution for each target cell.
+
+The overall shape of the file is laid out with a noweb reference (the
+`<<...>>` marker) as a placeholder for the function defined below.
+Entangled weaves the pieces back together into the file `src/effective.js`
+when you run `entangled tangle`.
+
+```{.javascript file=src/effective.js}
+<<effective-function>>
+```
+
+## Where the formula comes from
+
+As reported in [van Gestel, J., Bareia, T., Tenennbaum, B. et al.
+2021](https://doi.org/10.1038/s41467-021-22649-4), for a system with a
+large number of point sources and sinks, and when the decay length
+\(\lambda\) is small compared to the system size, the equilibrium
+concentration field can be approximated by an *effective solution* that
+weights the contributions of all sources and sinks in a single, closed
+form. The concentration at a point is written as a ratio
+
+\[
+f_b = \frac{S_b}{S_b + R_b}
+\]
+
+where the numerator collects the weighted contributions from the producer
+bacteria (sources) and the denominator also includes the contributions
+from the consumer bacteria (sinks):
+
+\[
+S_b = \sum_{k \in i} e^{-d_{ik}/\lambda}, \qquad
+R_b = \sum_{l \in j} e^{-d_{bl}/\lambda} .
+\]
+
+Here \(d_{bk}\) is the distance from the target point \(b\) to source
+\(k\), and \(d_{bl}\) the distance to sink \(l\) – exactly the exponential
+decay kernel implemented in `effectiveInfluence`.
+
+To turn these discrete sums into integrals, we imagine the bacteria as
+densely and homogeneously distributed over the domain
+\(\Omega = [0, L_x] \times [0, L_y]\). The denominator then becomes the
+integral of a constant density over the domain:
+
+\[
+F(x, y) = \int_0^{L_x} \int_0^{L_y}
+\; e^{-\sqrt{(x-x_i)^2 + (y-y_i)^2}/\lambda} \, dy_i \, dx_i .
+\]
+
+Introducing \(N\) producer bacteria as point sources means their signal
+can be drawn as a sum of delta functions,
+
+\[
+Q(x, y) = \sum_{k=1}^{N} \delta(x - x_k, y - y_k),
+\]
+
+and substituting this into the integral, the sifting property of the delta
+function collapses the double integral to a finite sum of decaying terms:
+
+\[
+G(x, y) = \sum_{k=1}^{N} e^{-\sqrt{(x-x_k)^2 + (y-y_k)^2}/\lambda} .
+\]
+
+Combining numerator and denominator gives the effective solution plotted
+in `effectiveSolution.qmd`:
+
+\[
+f_b(x, y) = \frac{G(x, y)}{F(x, y)} .
+\]
+
+The field computed by `effectiveInfluence` is the software analogue of
+that same scheme. It accumulates the kernel-weighted contributions at
+every source cell, just like \(G(x, y)\), and normalises by the total
+influence of all cells within the cutoff radius, exactly as \(F(x, y)\)
+does. The `scale` parameter is simply a residual multiplier applied to
+that ratio.
+
+## Computing the influence field
+
+Let us start with the high-level idea. For every target cell with
+coordinates `(targetX, targetY)`, we make a single pass over the whole
+grid and, for every cell, measure its distance to the target. If that
+distance falls within the cutoff range, we accumulate two quantities:
+
+- `totalInfluence` — the sum of the kernel `exp(-distance / lambda)` over
+  all nearby cells. This acts as a normalising denominator.
+- `localInfluence` — the same kernel-weighted sum, but only for cells that
+  are marked as sources, and weighted by the source strength itself.
+
+The effective influence at the target is then the ratio of these two
+quantities, scaled by the `scale` parameter:
+
+\[
+f_b = \text{scale} \frac{\sum_{i,j} s_{ij} e^{-d_{ij}/\lambda}}
+                          {\sum_{i,j} e^{-d_{ij}/\lambda}},
+\]
+
+where \(d_{ij}\) is the distance from the target cell to cell `(i, j)`
+and \(s_{ij}\) is the source strength. Dividing by the total influence
+normalises the result so that it does not depend on how many cells happen
+to lie within the cutoff radius.
+
+### Distance cutoff
+
+Because the kernel decays exponentially, cells farther than `5 * lambda`
+contribute almost nothing to the sum: `exp(-5) ≈ 0.007`. We pre-compute
+the squared cutoff distance and skip any cell whose squared distance
+exceeds it, avoiding a wasteful square-root calculation for every far-away
+cell.
+
+### Cell-centre coordinates
+
+Cell centers are placed at the midpoint of each cell, i.e. cell `(i, j)`
+is centred at `(i + 0.5, j + 0.5)`. This is also the cell index ordering
+used throughout the package: cells are stored in row-major order in flat
+`Float64Array`s, so the linear index for grid position `(i, j)` is
+`j * width + i`.
+
+```{.javascript #effective-function}
+/**
+ * Compute the effective influence of sources on a grid using a
+ * distance-weighted exponential kernel.
+ *
+ * @param {number} width  - Number of columns in the grid
+ * @param {number} height - Number of rows in the grid
+ * @param {Float64Array} sources - Flat array (row-major) of source strengths
+ * @param {number} lambda - Decay length scale of the kernel
+ * @param {number} scale  - Multiplier applied to the normalised influence
+ * @returns {Float64Array} Flat array of effective influence per cell
+ */
+export const effectiveInfluence = (width, height, sources, lambda, scale) => {
+    const effectiveInfluenceArray = new Float64Array(width * height).fill(0);
+
+    // Distance cutoff: beyond 5*lambda, exp(-5) ≈ 0.007 (negligible)
+    const cutoffDistance = lambda * 5;
+    const cutoffDistanceSq = cutoffDistance * cutoffDistance;
+
+    // For each target cell
+    for (let j = 0; j < height; j++) {
+        for (let i = 0; i < width; i++) {
+            const targetX = i + 0.5;
+            const targetY = j + 0.5;
+
+            let localInfluence = 0;
+            let totalInfluence = 0;
+
+            // Single pass through all cells
+            for (let jj = 0; jj < height; jj++) {
+                for (let ii = 0; ii < width; ii++) {
+                    const cellX = ii + 0.5;
+                    const cellY = jj + 0.5;
+                    const dx = cellX - targetX;
+                    const dy = cellY - targetY;
+                    const distSq = dx * dx + dy * dy;
+
+                    // Apply distance cutoff
+                    if (distSq > cutoffDistanceSq) continue;
+
+                    const distance = Math.sqrt(distSq);
+                    const influence = Math.exp(-distance / lambda);
+
+                    totalInfluence += influence;
+
+                    // Check if this cell is a source
+                    const cellIdx = jj * width + ii;
+                    if (sources[cellIdx] !== 0) {
+                        localInfluence += sources[cellIdx] * influence;
+                    }
+                }
+            }
+
+            const idx = j * width + i;
+            effectiveInfluenceArray[idx] = totalInfluence > 0 ?
+                scale * localInfluence / totalInfluence : 0;
+        }
+    }
+
+    return effectiveInfluenceArray;
+}
+```
+
+### Why the normalisation matters
+
+Dividing by `totalInfluence` keeps the result bounded and interpretable
+no matter where a target cell sits. A cell deep in a dense cluster of
+sources receives a strong local contribution, but the large denominator
+keeps the value stable; an isolated cell surrounded by few sources is
+normalised the same way, so the field reads as a smooth, intensity‑like
+measure rather than a raw count. When no cell at all lies within the
+cutoff of a target, `totalInfluence` is zero and we leave the cell at its
+zero initial value to avoid a division by zero.

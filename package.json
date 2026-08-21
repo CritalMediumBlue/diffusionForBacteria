@@ -30,14 +30,13 @@
         "test:ui": "vitest --ui --open --api.port 51204",
         "coverage": "vitest run --coverage",
         "coverage:serve": "npx http-server coverage -p 8080 -o",
-        "lint": "eslint \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"plottingarticle2D/**/*.js\"",
-        "lint:fix": "eslint \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"plottingarticle2D/**/*.js\" --fix",
-        "format": "prettier --write \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"plottingarticle2D/**/*.js\" \"*.json\" \"*.md\"",
-        "format:check": "prettier --check \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"plottingarticle2D/**/*.js\" \"*.json\" \"*.md\"",
+        "lint": "eslint \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\"",
+        "lint:fix": "eslint \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" --fix",
+        "format": "prettier --write \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"*.json\" \"*.md\"",
+        "format:check": "prettier --check \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"*.json\" \"*.md\"",
         "docs": "jsdoc -c jsdoc.json",
         "docs:serve": "npx http-server docs -p 8081 -o",
-        "plot": "vite plotting",
-        "plot:article2D": "vite plottingarticle2D"
+        "plot": "vite plotting"
     },
     "repository": {
         "type": "git",
