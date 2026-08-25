@@ -33,8 +33,8 @@ jobs:
       - name: Generate source files
         run: |
           mkdir -p literate/src
-          entangled tangle
-          ls -la literate/src
+          cd literate && entangled tangle
+    
 
       - name: Set up Quarto
         if: matrix.node-version == '22.x'
@@ -42,7 +42,7 @@ jobs:
 
       - name: Build Quarto site
         if: matrix.node-version == '22.x'
-        run: quarto render literate/
+        run: quarto render 
 
       - name: Check formatting
         run: npm run format:check
