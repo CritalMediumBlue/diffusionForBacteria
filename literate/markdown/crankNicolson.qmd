@@ -23,6 +23,49 @@ import { thomasAlgorithm } from "./thomasAlgorithm.js";
 
 ## Module‑level state
 
+The Crank‑Nicolson method for the 1‑D diffusion equation with decay and source terms
+
+$$
+\frac{\partial u}{\partial t} = D \frac{\partial^2 u}{\partial x^2} - k u + S(x)
+$$
+
+is discretized on a uniform grid with spacing \(\Delta x\) and time step \(\Delta t\). Let \(u_i^n\) denote the concentration at grid point \(i\) and time level \(n\). The scheme is
+
+$$
+\frac{u_i^{n+1} - u_i^n}{\Delta t} =
+\frac{D}{2} \left( \frac{u_{i-1}^{n+1} - 2u_i^{n+1} + u_{i+1}^{n+1}}{\Delta x^2}
++ \frac{u_{i-1}^{n} - 2u_i^{n} + u_{i+1}^{n}}{\Delta x^2} \right)
+- \frac{k}{2} \left( u_i^{n+1} + u_i^n \right) + S_i .
+$$
+
+Rearranging yields a tridiagonal system \(A \mathbf{u}^{n+1} = \mathbf{d}\) where
+
+$$
+A =
+\begin{pmatrix}
+1+\lambda+\beta & -\lambda & 0 & \cdots & 0 \\
+-\frac{\lambda}{2} & 1+\lambda+\beta & -\frac{\lambda}{2} & \ddots & \vdots \\
+0 & \ddots & \ddots & \ddots & 0 \\
+\vdots & \ddots & -\frac{\lambda}{2} & 1+\lambda+\beta & -\frac{\lambda}{2} \\
+0 & \cdots & 0 & -\lambda & 1+\lambda+\beta
+\end{pmatrix},
+$$
+
+with the dimensionless parameters
+
+$$
+\lambda = \frac{D \Delta t}{\Delta x^2}, \qquad
+\beta = \frac{k \Delta t}{2}.
+$$
+
+The right‑hand side vector \(\mathbf{d}\) is built from the explicit part:
+
+$$
+d_i = \frac{\lambda}{2} u_{i-1}^n + (1 - \lambda - \beta) u_i^n + \frac{\lambda}{2} u_{i+1}^n + \Delta t \, S_i,
+$$
+
+with Neumann (zero‑flux) boundary conditions implemented by mirroring ghost cells: \(u_{-1} = u_1\) and \(u_{N} = u_{N-2}\) for a grid of length \(N\).
+
 The following variables hold the grid length, the tridiagonal
 coefficients for the left‑hand side matrix, the work arrays for the
 Thomas algorithm, the solution arrays `u` and `uNext`, and the
