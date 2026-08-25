@@ -31,7 +31,7 @@ jobs:
         run: pip install entangled-cli
 
       - name: Generate source files
-        run: entangled
+        run: entangled tangle
 
       - name: Set up Quarto
         if: matrix.node-version == '22.x'
@@ -45,7 +45,7 @@ jobs:
         run: npm run lint
 
       - name: Check formatting
-        run: npm run format
+        run: npm run format:check
 
       - name: Run tests
         run: npm test
