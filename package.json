@@ -22,7 +22,7 @@
         "test": "vitest run",
         "coverage": "vitest run --coverage",
         "coverage:serve": "npx http-server coverage -p 8080 -o",
-        "format": "prettier --write \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"*.json\" \"*.md\"",
+        "format": "prettier --write \"*.js\" \"tests/**/*.js\" \"literate/plotting/**/*.js\" \"*.json\" \"*.md\"",
         "format:check": "prettier --check \"*.js\" \"tests/**/*.js\" \"plotting/**/*.js\" \"*.json\" \"*.md\"",
         "plot": "vite literate/plotting",
         "build": "tsc"
