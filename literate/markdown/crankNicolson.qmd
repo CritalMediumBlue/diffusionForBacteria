@@ -56,14 +56,7 @@ implemented by adjusting the first and last rows of the matrix using
 ghost‑cell mirroring.
 
 ```{.typescript #cn-set-properties}
-/**
- * Initialize properties for Crank-Nicolson method
- * @param {number} length - Number of grid points
- * @param {number} diffusionCoefficient - Diffusion coefficient (alpha)
- * @param {number} deltaX - Spatial step size
- * @param {number} deltaT - Time step size
- * @param {number} [decayRate=0] - Decay rate constant (k)
- */
+
 export const setCNProperties = (
     length: number,
     diffusionCoefficient: number,
@@ -128,13 +121,7 @@ If a negative concentration appears and `allowNegativeValues` is
 `false`, the function throws an error.
 
 ```{.typescript #cn-main-function}
-/**
- * Solve 1D diffusion equation using Crank-Nicolson method
- * @param {Float64Array} concentrationData - Initial concentration values
- * @param {Float64Array} sources - Source terms
- * @param {number} totalNumberOfIterations - Number of time steps
- * @param {boolean} [allowNegativeValues=false] - Whether to allow negative concentrations
- */
+
 export const CrankNicolson = (
     concentrationData: Float64Array,
     sources: Float64Array,
