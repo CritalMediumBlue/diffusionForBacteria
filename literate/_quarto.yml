@@ -17,8 +17,6 @@ book:
     - helpers.qmd
     - references.qmd
 
-resources:
-  - analyticSolution.js
 
 bibliography: references.bib
 
