@@ -1,6 +1,6 @@
 {
     "name": "handy-diffusion",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "description": "algorithms to simulate diffusion",
     "type": "module",
     "main": "./dist/index.js",
@@ -50,11 +50,12 @@
     "homepage": "https://github.com/CritalMediumBlue/diffusionForBacteria#readme",
     "devDependencies": {
         "@eslint/js": "^9.39.2",
-        "@typescript-eslint/eslint-plugin": "^8.67.0",
-        "@typescript-eslint/parser": "^8.67.0",
+        "@typescript-eslint/eslint-plugin": "^8.68.0",
+        "@typescript-eslint/parser": "^8.68.0",
         "@vitest/coverage-v8": "^4.0.16",
         "@vitest/ui": "^4.0.16",
         "eslint": "^9.39.2",
+        "eslint-plugin-markdown": "^5.1.0",
         "globals": "^17.0.0",
         "jsdoc": "^4.0.5",
         "plotly.js-dist": "^3.3.1",
