@@ -15,7 +15,7 @@ The overall shape of the file is laid out with a noweb reference (the
 Entangled weaves the pieces back together into the file `src/effective.js`
 when you run `entangled tangle`.
 
-```{.typescript file=../src/effective.ts}
+```{.typescript file=src/effective.ts}
 <<effective-function>>
 ```
 

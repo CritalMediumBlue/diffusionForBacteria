@@ -10,7 +10,7 @@ The overall shape of the file is laid out first, using noweb references
 (the `<<...>>` markers) as placeholders for content defined later in this
 document.
 
-```{.typescript file=../src/helpers.ts}
+```{.typescript file=src/helpers.ts}
 <<helpers-random-generators>>
 
 <<helpers-steady-state>>

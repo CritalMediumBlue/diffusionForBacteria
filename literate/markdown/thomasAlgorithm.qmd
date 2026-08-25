@@ -185,7 +185,7 @@ backwards to compute the remaining values.
 The final code block tells Entangled to write the file
 `src/thomasAlgorithm.ts` by concatenating all the pieces defined above.
 
-```{.typescript file=../src/thomasAlgorithm.ts}
+```{.typescript file=src/thomasAlgorithm.ts}
 <<thomas-tolerance>>
 
 <<thomas-signature>>

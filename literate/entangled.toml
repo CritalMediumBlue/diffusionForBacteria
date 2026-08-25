@@ -1,0 +1,17 @@
+version = "2.0"
+watch_list = ["markdown/*.qmd"]
+
+[[languages]]
+name = "JavaScript"
+identifiers = ["javascript", "js"]
+comment = { open = "//" }
+
+[[languages]]
+name = "Observable JavaScript"
+identifiers = ["ojs"]
+comment = { open = "//" }
+
+[[languages]]
+name = "TypeScript"
+identifiers = ["typescript", "ts"]
+comment = { open = "//" }

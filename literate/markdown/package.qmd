@@ -1,8 +1,8 @@
 # Package entry points
 
-## Barrel export (`../src/index.ts`)
+## Barrel export (`src/index.ts`)
 
-```{.typescript file=../src/index.ts}
+```{.typescript file=src/index.ts}
 // ~/~ begin <<literate/package.qmd#barrel>>[init]
 // Import and re-export ADI functions
 export { ADI, setADIProperties, updateSinksAndSources } from './adi.js';

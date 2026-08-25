@@ -179,7 +179,7 @@ export const analyticSteadyState = (
 The final code block tells Entangled to write the file
 `src/analyticSolution.ts` by concatenating the pieces defined above.
 
-```{.typescript file=../src/analyticSolution.ts}
+```{.typescript file=src/analyticSolution.ts}
 <<as-helper>>
 
 <<as-main>>
