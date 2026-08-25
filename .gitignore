@@ -14,6 +14,7 @@ coverage/
 docs/
 dist/
 build/
+src/
 test-plots/
 .quarto/
 .entangled/

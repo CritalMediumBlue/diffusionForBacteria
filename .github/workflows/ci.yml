@@ -31,7 +31,10 @@ jobs:
         run: pip install entangled-cli
 
       - name: Generate source files
-        run: entangled tangle
+        run: |
+          mkdir -p literate/src
+          entangled tangle
+          ls -la literate/src
 
       - name: Set up Quarto
         if: matrix.node-version == '22.x'
