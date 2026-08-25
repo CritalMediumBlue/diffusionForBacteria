@@ -1,24 +1,41 @@
-.aider*
+# Secrets
 .env
-src/
+.env.*
+!.env.example
+
+# Dependencies and environments
 node_modules/
-.quarto/
+.venv/
+venv/
+__pycache__/
+
+# Build, generated, coverage, and local outputs
 coverage/
 docs/
-.entangled/
 dist/
 build/
+src/
 test-plots/
+.quarto/
+.entangled/
+.cache/
+
+# Aider local state
+.aider*
+
+# Tool caches and logs
+.eslintcache
+.node_repl_history
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-.env
-.env.*
-!.env.example
-.eslintcache
-.node_repl_history
+
+# Temporary and OS files
+*~
+*.tmp
+*.temp
 .DS_Store
 .DS_Store?
 ._*
@@ -26,16 +43,3 @@ pnpm-debug.log*
 .Trashes
 ehthumbs.db
 Thumbs.db
-*~
-*.tmp
-*.temp
-.cache/
-
-# Local AI tool state
-.aider*
-
-# Everything related to python virtual environments and package managers and cache
-.venv/
-venv/
-__pycache__/
-
