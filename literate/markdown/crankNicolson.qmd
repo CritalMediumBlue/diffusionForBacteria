@@ -1,27 +1,4 @@
-# Explaining the Crank-Nicolson Method
-
-The Crank‑Nicolson method is a finite‑difference scheme for solving the
-1‑D diffusion equation with optional decay and source terms. It is
-implicit in time and second‑order accurate in both space and time. The
-method leads to a tridiagonal system that is solved efficiently with the
-Thomas algorithm.
-
-The module keeps all working arrays and coefficients at module scope so
-that they are allocated only once and reused across many calls to
-`CrankNicolson`.
-
-
-
-## Imports
-
-We import the Thomas algorithm solver that will be used to solve the
-tridiagonal system at each time step:
-
-```{.typescript #cn-imports}
-import { thomasAlgorithm } from "./thomasAlgorithm.js";
-```
-
-## Module‑level state
+# Explaining the Crank-Nicolson Method 
 
 The Crank‑Nicolson method for the 1‑D diffusion equation with decay and source terms
 
@@ -29,7 +6,7 @@ $$
 \frac{\partial u}{\partial t} = D \frac{\partial^2 u}{\partial x^2} - k u + S(x)
 $$
 
-is discretized on a uniform grid with spacing \(\Delta x\) and time step \(\Delta t\). Let \(u_i^n\) denote the concentration at grid point \(i\) and time level \(n\). The scheme is
+is discretized on a uniform grid with spacing $\Delta x$ and time step $\Delta t$. Let $u_i^n$ denote the concentration at grid point $i$ and time level $n$. The scheme is
 
 $$
 \frac{u_i^{n+1} - u_i^n}{\Delta t} =
@@ -37,8 +14,33 @@ $$
 + \frac{u_{i-1}^{n} - 2u_i^{n} + u_{i+1}^{n}}{\Delta x^2} \right)
 - \frac{k}{2} \left( u_i^{n+1} + u_i^n \right) + S_i .
 $$
+Rearranging gives
 
-Rearranging yields a tridiagonal system \(A \mathbf{u}^{n+1} = \mathbf{d}\) where
+$$
+u_i^{n+1} - u_i^n = \frac{D \Delta t}{2 \Delta x^2} \left( u_{i-1}^{n+1} - 2u_i^{n+1} + u_{i+1}^{n+1} + u_{i-1}^{n} - 2u_i^{n} + u_{i+1}^{n} \right)
+- \frac{k \Delta t}{2} \left( u_i^{n+1} + u_i^n \right) + \Delta t \, S_i.
+$$
+Now, we define the dimensionless parameters $\lambda = \frac{D \Delta t}{\Delta x^2}$ and $\beta = \frac{k \Delta t}{2}$, so that the equation becomes
+
+$$
+u_i^{n+1} - u_i^n = \frac{\lambda}{2} \left( u_{i-1}^{n+1} - 2u_i^{n+1} + u_{i+1}^{n+1} + u_{i-1}^{n} - 2u_i^{n} + u_{i+1}^{n} \right)
+- \beta \left( u_i^{n+1} + u_i^n \right) + \Delta t \, S_i.
+$$
+
+
+
+
+
+
+Rearranging and grouping terms gives
+
+$$
+- \frac{\lambda}{2} u_{i-1}^{n+1} + (1 + \lambda + \beta) u_i^{n+1} - \frac{\lambda}{2} u_{i+1}^{n+1} =
+\frac{\lambda}{2} u_{i-1}^{n} + (1 - \lambda - \beta) u_i^{n} + \frac{\lambda}{2} u_{i+1}^{n} + \Delta t \, S_i,
+$$
+
+
+Rearranging yields a tridiagonal system $A \mathbf{u}^{n+1} = \mathbf{d}$ where
 
 $$
 A =
@@ -58,19 +60,32 @@ $$
 \beta = \frac{k \Delta t}{2}.
 $$
 
-The right‑hand side vector \(\mathbf{d}\) is built from the explicit part:
+The right‑hand side vector $\mathbf{d}$ is built from the explicit part:
 
 $$
 d_i = \frac{\lambda}{2} u_{i-1}^n + (1 - \lambda - \beta) u_i^n + \frac{\lambda}{2} u_{i+1}^n + \Delta t \, S_i,
 $$
 
-with Neumann (zero‑flux) boundary conditions implemented by mirroring ghost cells: \(u_{-1} = u_1\) and \(u_{N} = u_{N-2}\) for a grid of length \(N\).
+with Neumann (zero‑flux) boundary conditions implemented by mirroring ghost cells: $u_{-1} = u_1$ and $u_{N} = u_{N-2}$ for a grid of length $N$.
 
 The following variables hold the grid length, the tridiagonal
 coefficients for the left‑hand side matrix, the work arrays for the
 Thomas algorithm, the solution arrays `u` and `uNext`, and the
 pre‑computed constants `lambda`, `beta`, `halfLambda`, `centerCoeff`,
 and `dt`.
+
+  
+
+## Imports
+
+We import the Thomas algorithm solver that will be used to solve the
+tridiagonal system at each time step:
+
+```{.typescript #cn-imports}
+import { thomasAlgorithm } from "./thomasAlgorithm.js";
+```
+
+## Module‑level state
 
 ```{.typescript #cn-variables}
 // Module-level variables for Crank-Nicolson
