@@ -1,4 +1,4 @@
-import { thomasAlgorithm } from "../src/index.js";
+import { thomasAlgorithm } from "../literate/src/index.js";
 import { describe, test, expect } from "vitest";
 import { mulberry32 } from "./random.js";
 

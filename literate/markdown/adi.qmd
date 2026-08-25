@@ -355,7 +355,7 @@ export const initADIArrays = (
 The final code block tells Entangled to write the file `src/adi.js` by
 concatenating all the pieces defined above:
 
-```{.typescript file=src/adi.ts}
+```{.typescript file=../src/adi.ts}
 <<adi-imports>>
 
 <<adi-variables>>

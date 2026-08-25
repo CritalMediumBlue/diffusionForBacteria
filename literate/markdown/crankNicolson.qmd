@@ -246,7 +246,7 @@ export const CrankNicolson = (
 The final code block tells Entangled to write the file
 `src/crankNicolson.js` by concatenating all the pieces defined above.
 
-```{.typescript file=src/crankNicolson.ts}
+```{.typescript file=../src/crankNicolson.ts}
 <<cn-imports>>
 
 <<cn-variables>>

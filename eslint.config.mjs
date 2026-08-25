@@ -7,7 +7,7 @@ export default [
 		ignores: [
 			'node_modules/**',
 			'coverage/**',
-			'docs/**',
+			'literate/docs/**',
 		]
 	},
 	{
@@ -46,7 +46,7 @@ export default [
 		}
 	},
 	{
-		files: ['plotting/**/*.js', 'plottingarticle2D/**/*.js'],
+		files: ['literate/plotting/**/*.js'],
 		languageOptions: {
 			ecmaVersion: 2022,
 			sourceType: 'module',

@@ -5,9 +5,9 @@ import {
     updateSinksAndSources,
     CrankNicolson,
     setCNProperties,
-} from "../src/index.js";
+} from "../literate/src/index.js";
 import { describe, test, expect } from "vitest";
-import { checkForSteadyState, calculateDifference } from "./src/helpers.js";
+import { checkForSteadyState, calculateDifference } from "../literate/src/helpers.js";
 import { mulberry32 } from "./random.js";
 
 const sourcesTestCases = [

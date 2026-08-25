@@ -1,6 +1,6 @@
-import { ADI, setADIProperties, updateSinksAndSources } from "../src/index.js";
+import { ADI, setADIProperties, updateSinksAndSources } from "../literate/src/index.js";
 import { describe, test, expect } from "vitest";
-import { checkForSteadyState } from "./src/helpers.js";
+import { checkForSteadyState } from "../literate/src/helpers.js";
 import { mulberry32 } from "./random.js";
 
 // ---------------------------------------------------------------------------
