@@ -1,6 +1,15 @@
-import { ADI, setADIProperties, analyticSteadyState, updateSinksAndSources } from "../src/index.js";
+import {
+    ADI,
+    setADIProperties,
+    analyticSteadyState,
+    updateSinksAndSources,
+} from "../literate/src/index.js";
 import { describe, test, expect } from "vitest";
-import { checkForSteadyState, createRandomSources, calculateDifference } from "./src/helpers.js";
+import {
+    checkForSteadyState,
+    createRandomSources,
+    calculateDifference,
+} from "../literate/src/helpers.js";
 import { mulberry32 } from "./random.js";
 
 const sourcesTestCases = [

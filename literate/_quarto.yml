@@ -1,24 +1,24 @@
 project:
   type: book
-  output-dir: ../docs
+  output-dir: docs
 
 book:
   title: "diffusion algorithms for bacteria"
   author: "Norah Jones"
   date: "8/20/2026"
   chapters:
-    - package.qmd
     - index.qmd
-    - adi.qmd
-    - crankNicolson.qmd
-    - analyticSolution.qmd
-    - effective.qmd
-    - thomasAlgorithm.qmd
-    - helpers.qmd
-    - references.qmd
+    - markdown/package.qmd
+    - markdown/adi.qmd
+    - markdown/crankNicolson.qmd
+    - markdown/analyticSolution.qmd
+    - markdown/effective.qmd
+    - markdown/thomasAlgorithm.qmd
+    - markdown/helpers.qmd
+    - markdown/references.qmd
 
 
-bibliography: references.bib
+bibliography: markdown/references.bib
 
 format:
   html:

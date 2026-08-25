@@ -1,6 +1,6 @@
-import { analyticSteadyState, effectiveInfluence } from "../src/index.js";
+import { analyticSteadyState, effectiveInfluence } from "../literate/src/index.js";
 import { describe, test, expect } from "vitest";
-import { createRandomSources } from "./src/helpers.js";
+import { createRandomSources } from "../literate/src/helpers.js";
 import { mulberry32 } from "./random.js";
 
 // ---------------------------------------------------------------------------

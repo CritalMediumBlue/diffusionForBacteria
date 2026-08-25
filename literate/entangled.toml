@@ -1,5 +1,5 @@
 version = "2.0"
-watch_list = ["literate/*.qmd"]
+watch_list = ["markdown/*.qmd"]
 
 [[languages]]
 name = "JavaScript"
