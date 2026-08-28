@@ -22,20 +22,20 @@ Rearranging gives
 
 $$
 u_i^{n+1} - u_i^n = \frac{D \Delta t}{2 \Delta x^2} \left( u_{i-1}^{n+1} - 2u_i^{n+1} + u_{i+1}^{n+1} + u_{i-1}^{n} - 2u_i^{n} + u_{i+1}^{n} \right)
-- \frac{k \Delta t}{2} \left( u_i^{n+1} + u_i^n \right) + \Delta t \, S_i.
+- \frac{k \Delta t}{2} \left( u_i^{n+1} + u_i^n \right) + \Delta t \left( O_i^{n+1} + I_i^{n+1} \right).
 $$
 Now, we define the dimensionless parameters $\lambda = \frac{D \Delta t}{\Delta x^2}$ and $\beta = \frac{k \Delta t}{2}$, so that the equation becomes
 
 $$
 u_i^{n+1} - u_i^n = \frac{\lambda}{2} \left( u_{i-1}^{n+1} - 2u_i^{n+1} + u_{i+1}^{n+1} + u_{i-1}^{n} - 2u_i^{n} + u_{i+1}^{n} \right)
-- \beta \left( u_i^{n+1} + u_i^n \right) + \Delta t \, S_i.
+- \beta \left( u_i^{n+1} + u_i^n \right) + \Delta t \left( O_i^{n+1} + I_i^{n+1} \right).
 $$
 
 Grouping ${\color{blue}\text{explicit}}$ and ${\color{red}\text{implicit}}$ terms gives:
 
 $$
 - \frac{\lambda}{2} u_{i-1}^{n+1} + (1 + \lambda + \beta) u_i^{n+1} - \frac{\lambda}{2} u_{i+1}^{n+1} =
-\frac{\lambda}{2}{\color{blue} u_{i-1}^{n}} + (1 - \lambda - \beta){\color{blue} u_i^{n}} + \frac{\lambda}{2}{\color{blue} u_{i+1}^{n}} + \Delta t \, S_i,
+\frac{\lambda}{2}{\color{blue} u_{i-1}^{n}} + (1 - \lambda - \beta){\color{blue} u_i^{n}} + \frac{\lambda}{2}{\color{blue} u_{i+1}^{n}} + \Delta t \left( O_i^{n+1} + I_i^{n+1} \right),
 $$
 
 
@@ -62,7 +62,7 @@ $$
 The right‑hand side vector $\mathbf{d}$ is built from the explicit part:
 
 $$
-d_i = \frac{\lambda}{2} u_{i-1}^n + (1 - \lambda - \beta) u_i^n + \frac{\lambda}{2} u_{i+1}^n + \Delta t \, S_i,
+d_i = \frac{\lambda}{2} u_{i-1}^n + (1 - \lambda - \beta) u_i^n + \frac{\lambda}{2} u_{i+1}^n + \Delta t \left( O_i^{n+1} + I_i^{n+1} \right),
 $$
 
 with Neumann (zero‑flux) boundary conditions implemented by mirroring ghost cells: $u_{-1} = u_1$ and $u_{N} = u_{N-2}$ for a grid of length $N$.
