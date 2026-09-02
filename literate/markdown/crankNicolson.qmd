@@ -1,9 +1,10 @@
-# Explaining the Crank-Nicolson Method 
+# Crank-Nicolson Method for biofilms
 
-We will implement the Crank‑Nicolson method for numerically solving the 1‑D diffusion equation with point-like sources $O(x,t)$ and sinks $I(x,u,t)$. This will be implemented for the case of a substance $u(x,t)$ that diffuses with constant diffusion coefficient $D$ and is injected or removed at certain points in space::
+We will implement the Crank‑Nicolson method for numerically solving the 1‑D diffusion equation with point-like sources and sinks. This will be implemented for the case of a substance $u(x,t)$ that diffuses with constant diffusion coefficient $D$ and is injected or removed at certain points in space:
 
+## Equation to solve
 $$
-\frac{\partial u}{\partial t} = D \frac{\partial^2 u}{\partial x^2} + O(x,t) + I(x,u,t)
+\frac{\partial u}{\partial t} = D \frac{\partial^2 u}{\partial x^2} + O(x,t) - I(x,u,t)
 $$ {#eq-diffusion-source-sink}
 
 When working with biofilms, the source term can represent the secration rate of certain biochemical substance, and such secretion rates are often independent of the concentration. On the other hand, the sink term $I$ ussually depends on $u$ because uptake rate of substances deppends on how much of the substance is available. This is why in this implementation the sink term is treated as a function of the concentration, while the source term is treated as a function of time only.
@@ -28,7 +29,7 @@ The point‑like sources and sinks are represented by Dirac deltas. On the discr
 
 $$
 O_i^n = \frac{K_O}{\Delta x} \sum_{s \in B_o} \delta_{i,i_s}, \qquad
-I_i^n = -\frac{K_I}{\Delta x} \, u_i^n \sum_{s \in B_i} \delta_{i,i_s},
+I_i^n = \frac{K_I}{\Delta x} \, u_i^n \sum_{s \in B_i} \delta_{i,i_s},
 $$
 
 where $\delta_{i,i_s}$ is the Kronecker delta (1 if grid point $i$ coincides with the source/sink location $i_s$, 0 otherwise). The factor $1/\Delta x$ ensures the integral of the source over a cell equals the physical strength.
