@@ -25,21 +25,21 @@ $$
 L(u_i^n) = \frac{u_{i-1}^n - 2u_i^n + u_{i+1}^n}{\Delta x^2}
 $$ {#eq-laplacian}
 
-The point‑like sources and sinks are represented by Dirac deltas. On the discrete grid they become
+The point‑like sources and sinks become, on the discrete grid,
 
 $$
-O_i^n = \frac{K_O}{\Delta x} \sum_{s \in B_o} \delta_{i,i_s}, \qquad
+O_i = \frac{K_O}{\Delta x} \sum_{s \in B_o} \delta_{i,i_s}, \qquad
 I_i^n = \frac{K_I}{\Delta x} \, u_i^n \sum_{s \in B_i} \delta_{i,i_s},
 $$
 
-where $\delta_{i,i_s}$ is the Kronecker delta (1 if grid point $i$ coincides with the source/sink location $i_s$, 0 otherwise). The factor $1/\Delta x$ ensures the integral of the source over a cell equals the physical strength.
+where $\delta_{i,i_s}$ is the Kronecker delta (1 if grid point $i$ coincides with the source/sink location $i_s$, 0 otherwise). The factor $1/\Delta x$ ensures the integral of the source over a cell equals the physical strength. Note that $O_i$ has no time index because the source is constant.
 
-Equation @eq-diffusion-source-sink is discretized with time step $\Delta t$. The Crank‑Nicolson scheme averages **all** terms between time levels $n$ and $n+1$:
+Equation @eq-diffusion-source-sink is discretized with time step $\Delta t$. The Crank‑Nicolson scheme averages the diffusion and sink terms between time levels $n$ and $n+1$; the constant source term is simply taken at its (time‑independent) value:
 
 $$
 \frac{u_i^{n+1} - u_i^n}{\Delta t} =
 \frac{D}{2} \left[ L(u_i^{n+1}) + L(u_i^n) \right]
-+ \frac{1}{2}\bigl(O_i^n + O_i^{n+1}\bigr)
++ O_i
 + \frac{1}{2}\bigl(I_i^n + I_i^{n+1}\bigr)
 $$ {#eq-cn-discrete}
 
@@ -47,7 +47,8 @@ Rearranging gives
 
 $$
 u_i^{n+1} - u_i^n = \frac{\lambda}{2} \left[ L(u_i^{n+1}) + L(u_i^n) \right]
-+ \frac{\Delta t}{2} \left( O_i^n + O_i^{n+1} + I_i^n + I_i^{n+1} \right),
++ \Delta t \, O_i
++ \frac{\Delta t}{2} \left( I_i^n + I_i^{n+1} \right),
 $$
 
 with the dimensionless parameter $\lambda = \frac{D \Delta t}{\Delta x^2}$.
