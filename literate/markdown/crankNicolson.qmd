@@ -24,7 +24,7 @@ $$
 L(u_i^n) = \frac{u_{i-1}^n - 2u_i^n + u_{i+1}^n}{\Delta x^2}
 $$ {#eq-laplacian}
 
-The point‑like sources and sinks are represented by Dirac deltas. On the grid they become
+The point‑like sources and sinks are represented by Dirac deltas. On the discrete grid they become
 
 $$
 O_i^n = \frac{K_O}{\Delta x} \sum_{s \in B_o} \delta_{i,i_s}, \qquad
