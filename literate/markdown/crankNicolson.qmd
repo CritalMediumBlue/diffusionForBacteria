@@ -42,17 +42,16 @@ $$
 \frac{u_i^{n+1} - u_i^n}{\Delta t} =
 \frac{D}{2} \left[ L(u_i^{n+1}) + L(u_i^n) \right]
 + O_i
-+ \frac{1}{2}\bigl(I_i^n + I_i^{n+1}\bigr)
+- \frac{K_I}{2\Delta x} \, \bigl( u_i^n + u_i^{n+1} \bigr)\sum_{s\in B_i} \delta_{i,i_s} 
 $$ {#eq-cn-discrete}
 
 Inserting the explicit form of $I_i^n$ with the common factor $K_I$ yields
 
 $$
 \frac{1}{2}\bigl(I_i^n + I_i^{n+1}\bigr) =
-\frac{K_I}{2\Delta x} \, s_i \bigl( u_i^n + u_i^{n+1} \bigr),
+\frac{K_I}{2\Delta x} \, \sum_{s\in B_i} \delta_{i,i_s} \bigl( u_i^n + u_i^{n+1} \bigr),
 $$
 
-where $s_i = \sum_{s\in B_i} \delta_{i,i_s}$ denotes the presence of a sink at grid point $i$.
 
 Rearranging gives
 

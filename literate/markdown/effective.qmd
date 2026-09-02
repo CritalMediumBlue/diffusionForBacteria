@@ -147,7 +147,7 @@ export const effectiveInfluence = (
     const effectiveInfluenceArray: Float64Array = new Float64Array(width * height).fill(0);
 
     // Distance cutoff: beyond 5*lambda, exp(-5) ≈ 0.007 (negligible)
-    const cutoffDistance: number = lambda * 5;
+    const cutoffDistance: number = lambda * 7;
     const cutoffDistanceSq: number = cutoffDistance * cutoffDistance;
 
     // For each target cell
