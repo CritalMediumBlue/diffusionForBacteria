@@ -1,6 +1,6 @@
 # Crank-Nicolson Method for biofilms
 
-We will implement the Crank‑Nicolson method for numerically solving the 1‑D diffusion equation with point-like sources and sinks. This will be implemented for the case of a substance $u(x,t)$ that diffuses with constant diffusion coefficient $D$ and is injected or removed at certain points in space:
+We will implement the Crank‑Nicolson method for numerically solving the 1‑D diffusion equation with point-like sources and sinks. This will be implemented for the case of a substance $u(x,t)$ that diffuses with constant diffusion coefficient $D$ and is injected or removed at certain points in space.
 
 ## Equation to solve
 
@@ -8,7 +8,7 @@ $$
 \frac{\partial u}{\partial t} = D \frac{\partial^2 u}{\partial x^2} + O(x) - I(x,u,t)
 $$ {#eq-diffusion-source-sink}
 
-In bacterial systems the secretion rate of a biochemical substance is often independent of the concentration and changes so slowly that it can be treated as constant in time. The uptake rate, on the other hand, typically depends on how much substance is available, so the sink term $I$ remains a function of $u$ (and therefore of time).
+In bacterial systems the secretion rate $O$ of a biochemical substance is often independent of the its extracellular concentration and changes so slowly that it can be treated as constant in time. The uptake rate $I$, on the other hand, typically depends on how much substance is available, so it remains a function of $u$ (and therefore of time).
 
 We represent the point‑like sources and sinks with Dirac delta functions:
 
@@ -17,7 +17,7 @@ O(x) = K_{O} \sum_{s\in B_o} \delta(x - x_s), \qquad
 I(x,u,t) = K_{I} \, u(x,t) \sum_{s\in B_i} \delta(x - x_s)
 $$
 
-Here $B_o$ and $B_i$ are the sets of bacteria that secrete and uptake the substance, respectively, and $K_O$, $K_I$ are the secretion and uptake rates. The sink term $I$ is linear in the concentration because the uptake rate $K_I$ is constant.
+Here $B_o$ and $B_i$ are the sets of bacteria that secrete and uptake the substance, respectively, and $K_O$, $K_I$ are the specific secretion and uptake rates. Here we assume that the uptake rate $I$ deppends linearly of in the concentration because, and assumes $K_I$ is constant.
 
 ## Discretization
 
