@@ -1,10 +1,20 @@
 # Explaining the Crank-Nicolson Method 
 
-The Crank‑Nicolson method for the 1‑D diffusion equation with point-like sources $O(x,t)$ and sinks $I(x,t)$ solves the PDE
+We will implement the Crank‑Nicolson method for numerically solving the 1‑D diffusion equation with point-like sources $O(x,t)$ and sinks $I(x,u,t)$. This will be implemented for the case of a substance $u(x,t)$ that diffuses with constant diffusion coefficient $D$ and is injected or removed at certain points in space::
 
 $$
-\frac{\partial u}{\partial t} = D \frac{\partial^2 u}{\partial x^2} + O(x,t) + I(x,t)
+\frac{\partial u}{\partial t} = D \frac{\partial^2 u}{\partial x^2} + O(x,t) + I(x,u,t)
 $$ {#eq-diffusion-source-sink}
+
+When working with biofilms, the source term can represent the secration rate of certain biochemical substance, and such secretion rates are often independent of the concentration. On the other hand, the sink term $I$ ussually depends on $u$ because uptake rate of substances deppends on how much of the substance is available. This is why in this implementation the sink term is treated as a function of the concentration, while the source term is treated as a function of time only.
+
+Since we will work with point-like sources and sinks, we will represent $O(x,t)$ and $I(x,u,t)$ using Dirac delta functions:
+
+$$
+O(x,t) = K_{O} \sum_{s\in B_o} \delta(x - x_s) \quad\text{and}\quad
+I(x,u,t) = K_{I} u(x,t)\sum_{s\in B_i}  \delta(x - x_s)
+$$
+Here, $B_o$ and $B_i$ are the sets of bacteria that secrete and uptake the substance, respectively, and $K_O$ and $K_I$ are the secretion and uptake rates. Here we assumed the uptake rate follows a linear dependence on the concentration.
 
 ## Discretization
 
@@ -14,16 +24,18 @@ $$
 L(u_i^n) = \frac{u_{i-1}^n - 2u_i^n + u_{i+1}^n}{\Delta x^2}
 $$ {#eq-laplacian}
 
-Equation @eq-diffusion-source-sink is then discretized with time step $\Delta t$. The Crank‑Nicolson scheme averages the spatial derivative between the current time level $n$ and the next time level $n+1$, and the decay term is treated with the same trapezoidal rule:
+Equation @eq-diffusion-source-sink is then discretized with time step $\Delta t$. The Crank‑Nicolson scheme averages the spatial derivative between the current time level $n$ and the next time level $n+1$:
 
 $$
 \frac{u_i^{n+1} - u_i^n}{\Delta t} =
 \frac{D}{2} \left[ L(u_i^{n+1}) + L(u_i^n) \right]
-- \frac{k}{2} \left( u_i^{n+1} + u_i^n \right) + O_i^{n+1} + I_i^{n+1}
+ + O_i^{n+1} + I_i^{n+1}
 $$ {#eq-cn-discrete}
 
-where $O_i$ and $I_i$ are the source terms (Out) and the sink terms (In)
-respectively. For biological applications, the source term $O_i$ is often independent of the concentration $u_i$, while the sink term $I_i$ may depend on $u_i$. In the current implementation the sink term is treated as a function of the concentration.
+where $O_i$ and $I_i$ are the source terms and the sink terms, respectively. 
+
+
+## Defining the tridiagonal system
 
 Rearranging gives
 
@@ -34,7 +46,6 @@ $$
 
 with the dimensionless parameters $\lambda = \frac{D \Delta t}{\Delta x^2}$ and $\beta = \frac{k \Delta t}{2}$.
 
-## Defining the tridiagonal system
 
 Grouping explicit and implicit terms gives:
 
