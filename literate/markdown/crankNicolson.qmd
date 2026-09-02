@@ -1,12 +1,14 @@
 # Explaining the Crank-Nicolson Method 
 
-The Crank‑Nicolson method for the 1‑D diffusion equation with decay and source terms
+The Crank‑Nicolson method for the 1‑D diffusion equation with point-like sources $O(x,t)$ and sinks $I(x,t)$ solves the PDE
 
 $$
-\frac{\partial u}{\partial t} = D \frac{\partial^2 u}{\partial x^2} - k u + S(x)
-$$
+\frac{\partial u}{\partial t} = D \frac{\partial^2 u}{\partial x^2} + O(x,t) + I(x,t)
+$$ {#eq-diffusion-source-sink}
 
-is discretized on a uniform grid with spacing $\Delta x$ and time step $\Delta t$. Let $u_i^n$ denote the concentration at grid point $i$ and time level $n$. The scheme is
+## Discretization
+
+Equation @eq-diffusion-source-sink is discretized on a uniform grid with spacing $\Delta x$ and time step $\Delta t$. Let $u_i^n$ denote the concentration at grid point $i$ and time point $n$. The discretized Crank‑Nicolson scheme is given by
 
 $$
 \frac{u_i^{n+1} - u_i^n}{\Delta t} =
@@ -16,7 +18,8 @@ $$
 $$
 
 where $O_i$ and $I_i$ are the source terms (Out) and the sink terms (In)
-at the next time step.
+respectively. For biological applications, the source term $O_i$ is often independent of the concentration $u_i$ – for example, bacteria producing a chemical $u$ do not care about the  
+, while the sink term $I_i$ is often dependent on the concentration $u_i$. For this reason, we treat the sink term as a function of the concentration
 
 Rearranging gives
 
@@ -31,11 +34,13 @@ u_i^{n+1} - u_i^n = \frac{\lambda}{2} \left( u_{i-1}^{n+1} - 2u_i^{n+1} + u_{i+1
 - \beta \left( u_i^{n+1} + u_i^n \right) + \Delta t \left( O_i^{n+1} + I_i^{n+1} \right).
 $$
 
-Grouping ${\color{blue}\text{explicit}}$ and ${\color{red}\text{implicit}}$ terms gives:
+## Defining the tridiagonal system
+
+Grouping explicit and implicit terms gives:
 
 $$
 - \frac{\lambda}{2} u_{i-1}^{n+1} + (1 + \lambda + \beta) u_i^{n+1} - \frac{\lambda}{2} u_{i+1}^{n+1} =
-\frac{\lambda}{2}{\color{blue} u_{i-1}^{n}} + (1 - \lambda - \beta){\color{blue} u_i^{n}} + \frac{\lambda}{2}{\color{blue} u_{i+1}^{n}} + \Delta t \left( O_i^{n+1} + I_i^{n+1} \right),
+\frac{\lambda}{2} u_{i-1}^{n} + (1 - \lambda - \beta) u_i^{n} + \frac{\lambda}{2} u_{i+1}^{n} + \Delta t \left( O_i^{n+1} + I_i^{n+1} \right),
 $$
 
 
