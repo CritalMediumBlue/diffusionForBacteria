@@ -45,6 +45,15 @@ $$
 + \frac{1}{2}\bigl(I_i^n + I_i^{n+1}\bigr)
 $$ {#eq-cn-discrete}
 
+Inserting the explicit form of $I_i^n$ with the common factor $K_I$ yields
+
+$$
+\frac{1}{2}\bigl(I_i^n + I_i^{n+1}\bigr) =
+\frac{K_I}{2\Delta x} \, s_i \bigl( u_i^n + u_i^{n+1} \bigr),
+$$
+
+where $s_i = \sum_{s\in B_i} \delta_{i,i_s}$ denotes the presence of a sink at grid point $i$.
+
 Rearranging gives
 
 $$
@@ -114,9 +123,9 @@ import { thomasAlgorithm } from "./thomasAlgorithm.js";
 ```{.typescript #cn-variables}
 // Module-level variables for Crank-Nicolson
 let LENGTH: number;
-let lowerDiagonal: Float64Array;
-let mainDiagonal: Float64Array;
-let upperDiagonal: Float64Array;
+let lowreDiagoal: Float64Array;
+let mainDiagnal: Float64Array;
+let upperDiagnal: Float64Array;
 let modifiedUpper: Float64Array;
 let modifiedRHS: Float64Array;
 let solution: Float64Array;
@@ -156,28 +165,28 @@ export const setCNProperties = (
     centerCoeff = 1.0 + lambda + beta;
 
     // Tridiagonal coefficients for A (left-hand side)
-    lowerDiagonal = new Float64Array(LENGTH);
-    mainDiagonal = new Float64Array(LENGTH);
-    upperDiagonal = new Float64Array(LENGTH);
+    lowreDiagoal = new Float64Array(LENGTH);
+    mainDiagnal = new Float64Array(LENGTH);
+    upperDiagnal = new Float64Array(LENGTH);
 
     // Interior coefficients
     for (let i: number = 1; i < LENGTH - 1; i++) {
-        lowerDiagonal[i] = -halfLambda;
-        mainDiagonal[i] = centerCoeff;
-        upperDiagonal[i] = -halfLambda;
+        lowreDiagoal[i] = -halfLambda;
+        mainDiagnal[i] = centerCoeff;
+        upperDiagnal[i] = -halfLambda;
     }
 
     // Neumann (reflective) boundaries using centered differences with ghost cells
     // u_{-1} = u_1 and u_n = u_{n-2} for zero flux
     // Left boundary i = 0: stencil becomes (1+λ+β)u_0 - λu_1
-    lowerDiagonal[0] = 0.0;
-    mainDiagonal[0] = centerCoeff;
-    upperDiagonal[0] = -lambda;
+    lowreDiagoal[0] = 0.0;
+    mainDiagnal[0] = centerCoeff;
+    upperDiagnal[0] = -lambda;
 
     // Right boundary i = LENGTH-1: stencil becomes -λu_{n-2} + (1+λ+β)u_{n-1}
-    lowerDiagonal[LENGTH - 1] = -lambda;
-    mainDiagonal[LENGTH - 1] = centerCoeff;
-    upperDiagonal[LENGTH - 1] = 0.0;
+    lowreDiagoal[LENGTH - 1] = -lambda;
+    mainDiagnal[LENGTH - 1] = centerCoeff;
+    upperDiagnal[LENGTH - 1] = 0.0;
 
     // Work arrays for Thomas algorithm
     modifiedUpper = new Float64Array(LENGTH);
@@ -272,9 +281,9 @@ export const CrankNicolson = (
 
         // Solve A u^{n+1} = d
         thomasAlgorithm(
-            lowerDiagonal,
-            mainDiagonal,
-            upperDiagonal,
+            lowreDiagoal,
+            mainDiagnal,
+            upperDiagnal,
             d,
             LENGTH,
             modifiedUpper,
