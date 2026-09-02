@@ -17,7 +17,7 @@ O(x) = K_{O} \sum_{s\in B_o} \delta(x - x_s), \qquad
 I(x,u,t) = K_{I} \, u(x,t) \sum_{s\in B_i} \delta(x - x_s)
 $$
 
-Here $B_o$ and $B_i$ are the sets of bacteria that secrete and uptake the substance, respectively, and $K_O$, $K_I$ are the secretion and uptake rates. The uptake rate is assumed to be linear in the concentration.
+Here $B_o$ and $B_i$ are the sets of bacteria that secrete and uptake the substance, respectively, and $K_O$, $K_I$ are the secretion and uptake rates. The sink term $I$ is linear in the concentration because the uptake rate $K_I$ is constant.
 
 ## Discretization
 
