@@ -1,112 +1,323 @@
-# Crank-Nicolson Method for biofilms
+# Crank--Nicolson Method
 
-We will implement the Crank‑Nicolson method for numerically solving the 1‑D diffusion equation with point-like sources and sinks. This will be implemented for the case of a substance $u(x,t)$ that diffuses with constant diffusion coefficient $D$ and is injected or removed at certain points in space.
+We consider a substance with concentration $u(x,t)$ that diffuses in one spatial dimension with a constant diffusion coefficient $D$. Individual bacteria may secrete the substance into the extracellular environment or remove it through uptake.
+
+:::{.callout-note title="Dimensions and units"}
+In this implementation, we use the following dimensions and units:
+
+- $M$ denotes 'amount of substance' (e.g. units of moles, molecules, or mass).
+- $L$ denotes the length (e.g. µm), 
+- $T$ denotes time (e.g. seconds).
+:::
 
 ## Equation to solve
 
+The governing diffusion--reaction equation is
+
 $$
-\frac{\partial u}{\partial t} = D \frac{\partial^2 u}{\partial x^2} + O(x) - I(x,u,t)
+\frac{\partial u}{\partial t}
+=
+D \frac{\partial^2 u}{\partial x^2}
++
+O(x)
+-
+I(x,u,t).
 $$ {#eq-diffusion-source-sink}
 
-In bacterial systems the secretion rate $O$ of a biochemical substance is often independent of the its extracellular concentration and changes so slowly that it can be treated as constant in time. The uptake rate $I$, on the other hand, typically depends on how much substance is available, so it remains a function of $u$ (and therefore of time).
+Here,
 
-We represent the point‑like sources and sinks with Dirac delta functions:
+- $u(x,t)$ is the extracellular concentration in units of $M/L$.
+- $D$ is the diffusion coefficient in units of $L^2/T$.
+- $O(x)$ is the source term, representing production of the substance in units of $M/(L\,T)$.
+- $I(x,u,t)$ is the sink term, representing uptake of the substance in units of $M/(L\,T)$.
+
+
+## Point-like sources and sinks
+
+Let $B_o$ denote the set of secreting bacteria and $B_i$ the set of consuming bacteria. Let $x_s$ be the position of bacterium $s$, and let $i_s$ be the grid index of the cell to which that bacterium is assigned. For example, $i_s$ may be chosen as the index of the nearest grid cell.
+
+All secreting bacteria are assumed to have the same per-cell secretion rate $K_O$ in units of $M/T$
+, and all consuming bacteria are assumed to have the same first-order uptake coefficient $K_I$ in units of $L/T$.
+The bacteria are represented as point-like sources and sinks using Dirac delta functions
 
 $$
-O(x) = K_{O} \sum_{s\in B_o} \delta(x - x_s), \qquad
-I(x,u,t) = K_{I} \, u(x,t) \sum_{s\in B_i} \delta(x - x_s)
+O(x)
+=
+K_O
+\sum_{s\in B_o}
+\delta(x-x_s), 
 $$
 
-Here $B_o$ and $B_i$ are the sets of bacteria that secrete and uptake the substance, respectively, and $K_O$, $K_I$ are the specific secretion and uptake rates. Here we assume that the uptake rate $I$ deppends linearly of in the concentration because, and assumes $K_I$ is constant.
+$$
+I(x,u,t)
+=
+K_I\,u(x,t)
+\sum_{s\in B_i}
+\delta(x-x_s).
+$$
 
-## Discretization
+Here, $K_O$ is the **per-cell secretion rate** or **point-source strength**. It specifies the amount of substance secreted by one bacterium per unit time. The parameter $K_I$ is the **per-cell first-order uptake coefficient**. Thus, the uptake rate of a consuming bacterium is proportional to the local extracellular concentration.
 
-Define the discrete Laplacian operator for a uniform grid with spacing $\Delta x$:
+The secretion term is independent of concentration and is assumed constant in time during the simulated interval. The uptake term follows a first-order uptake law.
+
+## Spatial discretization
+
+Let the spatial domain be discretized on a uniform grid with spacing $\Delta x$, and let $u_i^n$ approximate $u(x_i,t^n)$. Define the discrete Laplacian by
 
 $$
-L(u_i^n) = \frac{u_{i-1}^n - 2u_i^n + u_{i+1}^n}{\Delta x^2}
+L(u_i^n)
+=
+\frac{u_{i-1}^n - 2u_i^n + u_{i+1}^n}{\Delta x^2}.
 $$ {#eq-laplacian}
 
-The point‑like sources and sinks become, on the discrete grid,
+Using the grid index $i_s$ assigned to bacterium $s$, the discrete source and sink terms are
 
 $$
-O_i = \frac{K_O}{\Delta x} \sum_{s \in B_o} \delta_{i,i_s}, \qquad
-I_i^n = \frac{K_I}{\Delta x} \, u_i^n \sum_{s \in B_i} \delta_{i,i_s},
+O_i
+=
+\frac{K_O}{\Delta x}
+\sum_{s\in B_o}
+\delta_{i,i_s},
 $$
 
-where $\delta_{i,i_s}$ is the Kronecker delta (1 if grid point $i$ coincides with the source/sink location $i_s$, 0 otherwise). The factor $1/\Delta x$ ensures the integral of the source over a cell equals the physical strength. Note that $O_i$ has no time index because the source is constant.
-
-Equation @eq-diffusion-source-sink is discretized with time step $\Delta t$. The Crank‑Nicolson scheme averages the diffusion and sink terms between time levels $n$ and $n+1$; the constant source term is simply taken at its (time‑independent) value:
-
 $$
-\frac{u_i^{n+1} - u_i^n}{\Delta t} =
-\frac{D}{2} \left[ L(u_i^{n+1}) + L(u_i^n) \right]
-+ O_i
-- \frac{K_I}{2\Delta x} \, \bigl( u_i^n + u_i^{n+1} \bigr)\sum_{s\in B_i} \delta_{i,i_s} 
-$$ {#eq-cn-discrete}
-
-Inserting the explicit form of $I_i^n$ with the common factor $K_I$ yields
-
-$$
-\frac{1}{2}\bigl(I_i^n + I_i^{n+1}\bigr) =
-\frac{K_I}{2\Delta x} \, \sum_{s\in B_i} \delta_{i,i_s} \bigl( u_i^n + u_i^{n+1} \bigr),
+I_i^n
+=
+\frac{K_I}{\Delta x}
+u_i^n
+\sum_{s\in B_i}
+\delta_{i,i_s}.
 $$
 
-
-Rearranging gives
-
-$$
-u_i^{n+1} - u_i^n = \frac{\lambda}{2} \left[ L(u_i^{n+1}) + L(u_i^n) \right]
-+ \Delta t \, O_i
-+ \frac{\Delta t}{2} \left( I_i^n + I_i^{n+1} \right),
-$$
-
-with the dimensionless parameter $\lambda = \frac{D \Delta t}{\Delta x^2}$.
+The factor $1/\Delta x$ represents each point-like bacterium as a source or sink distributed over its assigned grid cell. Consequently, integrating the discrete source or sink over that cell recovers the secretion or uptake associated with that bacterium.
 
 
-Grouping explicit and implicit terms gives:
+## Crank--Nicolson discretization
+
+Using the Crank--Nicolson method, the diffusion and uptake terms are averaged between time levels $n$ and $n+1$. Since the secretion term is assumed constant in time, it is included directly:
 
 $$
-- \frac{\lambda}{2} u_{i-1}^{n+1} + (1 + \lambda + \beta) u_i^{n+1} - \frac{\lambda}{2} u_{i+1}^{n+1} =
-\frac{\lambda}{2} u_{i-1}^{n} + (1 - \lambda - \beta) u_i^{n} + \frac{\lambda}{2} u_{i+1}^{n} + \Delta t \left( O_i^{n+1} + I_i^{n+1} \right),
+\frac{u_i^{n+1} - u_i^n}{\Delta t}
+=
+\frac{D}{2}
+\left[
+L(u_i^{n+1}) + L(u_i^n)
+\right]
++
+O_i
+-
+\frac{1}{2}
+\left[
+I_i^{n+1} + I_i^n
+\right].
+$${#eq-crank-nicolson}
+
+Inserting the explicit forms of the discrete Laplacian, source, and sink into
+@eq-crank-nicolson gives 
+
+$$
+\begin{aligned}
+u_i^{n+1} - u_i^n
+={}&
+\frac{D \Delta t}{2 \Delta x^2}
+\Bigl[
+    u_{i-1}^{n+1}
+    - 2u_i^{n+1}
+    + u_{i+1}^{n+1}
+    + u_{i-1}^{n}
+    - 2u_i^{n}
+    + u_{i+1}^{n}
+\Bigr]
+\\
+&+
+\frac{K_O \Delta t}{\Delta x}
+\sum_{s\in B_o}
+\delta_{i,i_s}
+\\
+&-
+\frac{K_I \Delta t}{2\Delta x}
+\Bigl(
+    u_i^n + u_i^{n+1}
+\Bigr)
+\sum_{s\in B_i}
+\delta_{i,i_s}.
+\end{aligned}
+$$ {#eq-crank-nicolson-expanded}
+
+
+For convenience, define the dimensionless diffusion parameter
+
+$$
+\lambda
+=
+\frac{D \Delta t}{2\Delta x^2}.
 $$
 
+Define the contribution of the source term to the concentration over one time step as
 
-Rearranging yields a tridiagonal system $A \mathbf{u}^{n+1} = \mathbf{d}$ where
+$$
+q_i
+=
+\Delta t\,O_i
+=
+\frac{K_O \Delta t}{\Delta x}
+\sum_{s\in B_o}
+\delta_{i,i_s}.
+$$
+
+Finally, define the local dimensionless uptake parameter
+
+$$
+\beta_i
+=
+\frac{K_I \Delta t}{2\Delta x}
+\sum_{s\in B_i}
+\delta_{i,i_s}.
+$$
+
+Then @eq-crank-nicolson-expanded can be written as
+
+$$
+\begin{aligned}
+u_i^{n+1} - u_i^n
+={}&
+\lambda
+\Bigl[
+    u_{i-1}^{n+1}
+    - 2u_i^{n+1}
+    + u_{i+1}^{n+1}
+    + u_{i-1}^{n}
+    - 2u_i^{n}
+    + u_{i+1}^{n}
+\Bigr]
+\\
+&+
+q_i
+-
+\beta_i
+\Bigl(
+    u_i^n + u_i^{n+1}
+\Bigr).
+\end{aligned}
+$$
+
+Collecting the unknown terms at time level $n+1$ on the left-hand side gives
+
+$$
+- \lambda u_{i-1}^{n+1}
++ \left(1 + 2\lambda + \beta_i\right) u_i^{n+1}
+- \lambda u_{i+1}^{n+1}
+=
+ \lambda u_{i-1}^{n}
++\left(1 - 2\lambda - \beta_i\right) u_i^n
++\lambda u_{i+1}^{n}
++q_i.
+$$ {#eq-crank-nicolson-tridiagonal}
+
+This equation applies to every grid point $i=0,\ldots,N$.
+
+If we apply this equation to $4$ grid points ($i=0,1,2,3$), we obtain a system of $4$ linear equations for the unknowns $u_i^{n+1}$ 
+
+$$
+\begin{aligned}
+-{\color{red} \lambda u_{-1}^{n+1}}
++ \left(1 + 2\lambda + \beta_0\right) u_0^{n+1}
+- \lambda u_{1}^{n+1}
+={}&
+{\color{red} \lambda u_{-1}^{n}}
++\left(1 - 2\lambda - \beta_0\right) u_0^n
++\lambda u_{1}^{n}
++q_0,
+\\
+- \lambda u_{0}^{n+1}
++ \left(1 + 2\lambda + \beta_1\right) u_1^{n+1}
+- \lambda u_{2}^{n+1}
+={}&
+ \lambda u_{0}^{n}
++\left(1 - 2\lambda - \beta_1\right) u_1^n
++\lambda u_{2}^{n}
++q_1,
+\\
+- \lambda u_{1}^{n+1}
++ \left(1 + 2\lambda + \beta_2\right) u_2^{n+1}
+- \lambda u_{3}^{n+1}
+={}&
+ \lambda u_{1}^{n}
++\left(1 - 2\lambda - \beta_2\right) u_2^n
++\lambda u_{3}^{n}
++q_2,
+\\
+- \lambda u_{2}^{n+1}
++ \left(1 + 2\lambda + \beta_3\right) u_3^{n+1}
+ - {\color{red} \lambda u_{4}^{n+1}}
+={}&
+ \lambda u_{2}^{n}
++\left(1 - 2\lambda - \beta_3\right) u_3^n
++{\color{red}\lambda u_{4}^{n}}
++q_3.
+\end{aligned}
+$$
+Here, the red terms correspond to cells outside the domain which represent the boundary conditions. These are set to a constant value in the case of Dirichlet boundary conditions, or set to the value of the nearest interior cell in the case of Neumann (zero-flux) boundary conditions. For this implementation, we use Neumann boundary conditions. This way, by setting $u_{-1} = u_0$ and $u_4 = u_3$, we can eliminate the red terms, giving 
+
+$$
+\begin{aligned}
+\left(1 + \lambda + \beta_0\right) u_0^{n+1} - \lambda u_{1}^{n+1}
+={}&
+\left(1 - \lambda - \beta_0\right) u_0^n
++\lambda u_{1}^{n}
++q_0,
+\\
+- \lambda u_{0}^{n+1}
++ \left(1 + 2\lambda + \beta_1\right) u_1^{n+1}
+- \lambda u_{2}^{n+1}
+={}&
+ \lambda u_{0}^{n}
++\left(1 - 2\lambda - \beta_1\right) u_1^n
++\lambda u_{2}^{n}
++q_1,
+\\
+- \lambda u_{1}^{n+1}
++ \left(1 + 2\lambda + \beta_2\right) u
+_2^{n+1}
+- \lambda u_{3}^{n+1}
+={}&
+ \lambda u_{1}^{n}
++\left(1 - 2\lambda - \beta_2\right) u_2^n
++\lambda u_{3}^{n}
++q_2,
+\\
+- \lambda u_{2}^{n+1}
++ \left(1 + \lambda + \beta_3\right) u_3^{n+1}
+={}&
+ \lambda u_{2}^{n}
++\left(1 - \lambda - \beta_3\right) u_3^n
++q_3.
+\end{aligned}
+$$
+
+This is a tridiagonal system that can be represented in matrix form as $A u^{n+1} = d$, where $A$ is
 
 $$
 A =
-\begin{pmatrix}
-1+\lambda+\beta & -\lambda & 0 & \cdots & 0 \\
--\frac{\lambda}{2} & 1+\lambda+\beta & -\frac{\lambda}{2} & \ddots & \vdots \\
-0 & \ddots & \ddots & \ddots & 0 \\
-\vdots & \ddots & -\frac{\lambda}{2} & 1+\lambda+\beta & -\frac{\lambda}{2} \\
-0 & \cdots & 0 & -\lambda & 1+\lambda+\beta
-\end{pmatrix},
+\begin{bmatrix}
+1 + \lambda + \beta_0 & -\lambda & 0 & 0 \\
+-\lambda & 1 + 2\lambda + \beta_1 & -\lambda & 0 \\
+0 & -\lambda & 1 + 2\lambda + \beta_2 & -\lambda \\
+0 & 0 & -\lambda & 1 + \lambda + \beta_3
+\end{bmatrix},
+$$
+and the right-hand side vector $d$ is
+$$
+d =
+\begin{bmatrix}
+\left(1 - \lambda - \beta_0\right) u_0^n + \lambda u_1^n + q_0 \\
+\lambda u_0^n + \left(1 - 2\lambda - \beta_1\right) u_1^n + \lambda u_2^n + q_1 \\
+\lambda u_1^n + \left(1 - 2\lambda - \beta_2\right) u_2^n + \lambda u_3^n + q_2 \\
+\lambda u_2^n + \left(1 - \lambda - \beta_3\right) u_3^n + q_3
+\end{bmatrix}.
 $$
 
-with the dimensionless parameters
 
-$$
-\lambda = \frac{D \Delta t}{\Delta x^2}, \qquad
-\beta = \frac{k \Delta t}{2}.
-$$
-
-The right‑hand side vector $\mathbf{d}$ is built from the explicit part:
-
-$$
-d_i = \frac{\lambda}{2} u_{i-1}^n + (1 - \lambda - \beta) u_i^n + \frac{\lambda}{2} u_{i+1}^n + \Delta t \left( O_i^{n+1} + I_i^{n+1} \right),
-$$
-
-with Neumann (zero‑flux) boundary conditions implemented by mirroring ghost cells: $u_{-1} = u_1$ and $u_{N} = u_{N-2}$ for a grid of length $N$.
-
-The following variables hold the grid length, the tridiagonal
-coefficients for the left‑hand side matrix, the work arrays for the
-Thomas algorithm, the solution arrays `u` and `uNext`, and the
-pre‑computed constants `lambda`, `beta`, `halfLambda`, `centerCoeff`,
-and `dt`.
-
-  
 
 ## Imports
 
