@@ -42,6 +42,7 @@ describe("Crank-Nicolson vs ADI Comparison", () => {
         sources[WIDTH * 4 + Math.floor(WIDTH / 2)] = 1.0;
         const sinks = new Float64Array(WIDTH * HEIGHT).fill(DECAY_RATE);
         const initialConcentration = new Float64Array(WIDTH * HEIGHT).fill(0);
+        const beta = new Float64Array(WIDTH).fill(DECAY_RATE * deltaT / 2.0);
         for (let i = 0; i < WIDTH; i++) {
             initialConcentration[WIDTH * 0 + i] = 1 + Math.sin((i / WIDTH) * Math.PI * 5) / 2; // some initial condition
             initialConcentration[WIDTH * 1 + i] = initialConcentration[WIDTH * 0 + i]; // mirror
@@ -50,7 +51,7 @@ describe("Crank-Nicolson vs ADI Comparison", () => {
             initialConcentration[WIDTH * 4 + i] = initialConcentration[WIDTH * 0 + i]; // mirror
         }
         setADIProperties(WIDTH, HEIGHT, DIFFUSION_RATE, deltaX, deltaT);
-        setCNProperties(WIDTH, DIFFUSION_RATE, deltaX, deltaT, DECAY_RATE);
+        setCNProperties(WIDTH, DIFFUSION_RATE, deltaX, deltaT, beta);
 
         const numericalSolutionCrank = initialConcentration.slice(2 * WIDTH, 3 * WIDTH);
         const numericalSolutionADI = initialConcentration.slice();
@@ -227,7 +228,7 @@ describe("CrankNicolson vs Analitic Steady-State Solution", () => {
             }
         }
 
-        setCNProperties(WIDTH, DIFFUSION_RATE, deltaX, deltaT, DECAY_RATE);
+        setCNProperties(WIDTH, DIFFUSION_RATE, deltaX, deltaT, new Float64Array(WIDTH).fill(DECAY_RATE * deltaT / 2.0));
 
         // Act - Compute analytical solution
         const analyticalSolution2D = analyticSteadyState(

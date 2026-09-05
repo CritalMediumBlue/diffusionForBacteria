@@ -174,31 +174,38 @@ u_i^{n+1} - u_i^n
 \\
 &-
 \frac{K_I \Delta t}{2\Delta x}
-\Bigl(
+\Bigl[
     u_i^n + u_i^{n+1}
-\Bigr)
+\Bigr]
 \sum_{s\in B_i}
 \delta_{i,i_s}.
 \end{aligned}
 $$ {#eq-crank-nicolson-expanded}
 
 
-For convenience, define the dimensionless parameters 
+For convenience, define the dimensionless parameter 
 
 $$
 \lambda
 =
-\frac{D \Delta t}{2\Delta x^2} \qquad \beta_i = \frac{K_I \Delta t}{2\Delta x}
-\sum_{s\in B_i}
-\delta_{i,i_s}
+\frac{D \Delta t}{2\Delta x^2}
 $$
+which is defined at the  module scope as
 
 ```{.typescript #dimensionless filename="dimensionless"}
 let lambda: number;
 ```
 
-Define the contribution of the source term to the concentration over one time step as
+and then initialized in `setCNProperties` as
 
+```{.typescript #compute-lambda filename="compute-lambda"}
+lambda = (D * deltaT) / (2.0 * deltaX * deltaX);
+```
+where `D` is the diffusion coefficient passed as a parameter to `setCNProperties`.
+
+
+
+Let's also define the contribution of the source term to the concentration over one time step as
 $$
 q_i
 =
@@ -218,6 +225,12 @@ $$
 \sum_{s\in B_i}
 \delta_{i,i_s}.
 $$
+$$
+\beta_i = \frac{K_I \Delta t}{2\Delta x}
+\sum_{s\in B_i}
+\delta_{i,i_s}
+$$
+
 
 Then @eq-crank-nicolson-expanded can be written as
 
@@ -260,9 +273,9 @@ $$ {#eq-crank-nicolson-tridiagonal}
 
 This equation applies to every grid point $i=0,\ldots,N$.
 
-:::{.callout-note collapse=true title='Example with $N=3$'}
+:::{.callout-note collapse=true title='Example with $N=4$'}
 
-If we apply this equation to $4$ grid points ($i=0,1,2,3$), we obtain a system of $4$ linear equations for the unknowns $u_i^{n+1}$ 
+If we apply this equation to $5$ grid points ($i=0,1,2,3,4$), we obtain a system of $5$ linear equations for the unknowns $u_i^{n+1}$ 
 
 $$
 \begin{aligned}
@@ -295,15 +308,24 @@ $$
 \\
 - \lambda u_{2}^{n+1}
 + \left(1 + 2\lambda + \beta_3\right) u_3^{n+1}
- - {\color{red} \lambda u_{4}^{n+1}}
+ - \lambda u_{4}^{n+1}
 ={}&
  \lambda u_{2}^{n}
 +\left(1 - 2\lambda - \beta_3\right) u_3^n
-+{\color{red}\lambda u_{4}^{n}}
-+q_3.
++\lambda u_{4}^{n}
++q_3,
+\\
+ - \lambda u_{3}^{n+1}
++ \left(1 + 2\lambda + \beta_4\right) u_4^{n+1}
+ - {\color{red} \lambda u_{5}^{n+1}}
+={}&
+ \lambda u_{3}^{n}
++\left(1 - 2\lambda - \beta_4\right) u_4^n
++{\color{red}\lambda u_{5}^{n}}
++q_4.
 \end{aligned}
 $$
-Here, the red terms correspond to cells outside the domain which represent the boundary conditions. These are set to a constant value in the case of Dirichlet boundary conditions, or set via centered difference mirroring in the case of Neumann (zero-flux) boundary conditions. For this implementation, we use Neumann zero-flux boundary conditions. With centered differences, zero flux at the left boundary implies $u_{-1} = u_1$, and at the right boundary $u_{N} = u_{N-2}$. This way, by setting $u_{-1} = u_1$ and $u_4 = u_2$, we can eliminate the red terms, giving 
+Here, the red terms correspond to cells outside the domain which represent the boundary conditions. These are set to a constant value in the case of Dirichlet boundary conditions, or set via centered difference mirroring in the case of Neumann (zero-flux) boundary conditions. For this implementation, we use Neumann zero-flux boundary conditions. With centered differences, zero flux at the left boundary implies $u_{-1} = u_1$, and at the right boundary $u_{N} = u_{N-2}$. This way, by setting $u_{-1} = u_1$ and $u_5 = u_3$, we can eliminate the red terms, giving 
 
 $$
 \begin{aligned}
@@ -331,12 +353,21 @@ $$
 +\lambda u_{3}^{n}
 +q_2,
 \\
-- 2\lambda u_{2}^{n+1}
+- \lambda u_{2}^{n+1}
 + \left(1 + 2\lambda + \beta_3\right) u_3^{n+1}
+- \lambda u_{4}^{n+1}
 ={}&
- 2\lambda u_{2}^{n}
+ \lambda u_{2}^{n}
 +\left(1 - 2\lambda - \beta_3\right) u_3^n
-+q_3.
++\lambda u_{4}^{n}
++q_3,
+\\
+- 2\lambda u_{3}^{n+1}
++ \left(1 + 2\lambda + \beta_4\right) u_4^{n+1}
+={}&
+ 2\lambda u_{3}^{n}
++\left(1 - 2\lambda - \beta_4\right) u_4^n
++q_4.
 \end{aligned}
 $$
 
@@ -345,10 +376,11 @@ This is a tridiagonal system that can be represented in matrix form as $A u^{n+1
 $$
 A =
 \begin{bmatrix}
-1 + 2\lambda + \beta_0 & -2\lambda & 0 & 0 \\
--\lambda & 1 + 2\lambda + \beta_1 & -\lambda & 0 \\
-0 & -\lambda & 1 + 2\lambda + \beta_2 & -\lambda \\
-0 & 0 & -2\lambda & 1 + 2\lambda + \beta_3
+1 + 2\lambda + \beta_0 & -2\lambda & 0 & 0 & 0 \\
+-\lambda & 1 + 2\lambda + \beta_1 & -\lambda & 0 & 0 \\
+0 & -\lambda & 1 + 2\lambda + \beta_2 & -\lambda & 0 \\
+0 & 0 & -\lambda & 1 + 2\lambda + \beta_3 & -\lambda \\
+0 & 0 & 0 & -2\lambda & 1 + 2\lambda + \beta_4
 \end{bmatrix},
 $$
 and the right-hand side vector $d$ is
@@ -358,7 +390,8 @@ d =
 \left(1 - 2\lambda - \beta_0\right) u_0^n + 2\lambda u_1^n + q_0 \\
 \lambda u_0^n + \left(1 - 2\lambda - \beta_1\right) u_1^n + \lambda u_2^n + q_1 \\
 \lambda u_1^n + \left(1 - 2\lambda - \beta_2\right) u_2^n + \lambda u_3^n + q_2 \\
-2\lambda u_2^n + \left(1 - 2\lambda - \beta_3\right) u_3^n + q_3
+\lambda u_2^n + \left(1 - 2\lambda - \beta_3\right) u_3^n + \lambda u_4^n + q_3 \\
+2\lambda u_3^n + \left(1 - 2\lambda - \beta_4\right) u_4^n + q_4
 \end{bmatrix}.
 $$
 
@@ -378,15 +411,14 @@ import { thomasAlgorithm } from "./thomasAlgorithm.js";
 ```{.typescript #cn-variables filename="cn-variables"}
 // Module-level variables for Crank-Nicolson
 <<array-u>>
-let lowreDiagoal: Float64Array;
+let lowerDiagoal: Float64Array;
 let mainDiagnal: Float64Array;
 let upperDiagnal: Float64Array;
 let modifiedUpper: Float64Array;
 let modifiedRHS: Float64Array;
 let solution: Float64Array;
 let uNext: Float64Array;
-let beta: number;
-let centerCoeff: number;
+let beta: Float64Array;
 ```
 
 ## Setting up the Crank‑Nicolson coefficients
@@ -404,36 +436,35 @@ export const setCNProperties = (
     D: number,
     deltaX: number,
     deltaT: number,
-    decayRate: number = 0,
+    betaArray: Float64Array,
 ): void => {
     <<definition-inside-cn>>
     // Calculate coefficients
-    lambda = (D * deltaT) / (2.0 * deltaX * deltaX);
-    beta = (decayRate * deltaT) / 2.0;
-    centerCoeff = 1.0 + 2.0 * lambda + beta;
+    <<compute-lambda>>
+    beta = betaArray;
 
     // Tridiagonal coefficients for A (left-hand side)
-    lowreDiagoal = new Float64Array(N);
+    lowerDiagoal = new Float64Array(N);
     mainDiagnal = new Float64Array(N);
     upperDiagnal = new Float64Array(N);
 
     // Interior coefficients
     for (let i: number = 1; i < N - 1; i++) {
-        lowreDiagoal[i] = -lambda;
-        mainDiagnal[i] = centerCoeff;
+        lowerDiagoal[i] = -lambda;
+        mainDiagnal[i] = 1.0 + 2.0 * lambda + beta[i];
         upperDiagnal[i] = -lambda;
     }
 
     // Neumann (reflective) boundaries using centered differences with ghost cells
     // u_{-1} = u_1 and u_n = u_{n-2} for zero flux
-    // Left boundary i = 0: stencil becomes (1+2λ+β)u_0 - 2λu_1
-    lowreDiagoal[0] = 0.0;
-    mainDiagnal[0] = centerCoeff;
+    // Left boundary i = 0: stencil becomes (1+2λ+β[0])u_0 - 2λu_1
+    lowerDiagoal[0] = 0.0;
+    mainDiagnal[0] = 1.0 + 2.0 * lambda + beta[0];
     upperDiagnal[0] = -2.0 * lambda;
 
-    // Right boundary i = N-1: stencil becomes -2λu_{n-2} + (1+2λ+β)u_{n-1}
-    lowreDiagoal[N - 1] = -2.0 * lambda;
-    mainDiagnal[N - 1] = centerCoeff;
+    // Right boundary i = N-1: stencil becomes -2λu_{n-2} + (1+2λ+β[N-1])u_{n-1}
+    lowerDiagoal[N - 1] = -2.0 * lambda;
+    mainDiagnal[N - 1] = 1.0 + 2.0 * lambda + beta[N - 1];
     upperDiagnal[N - 1] = 0.0;
 
     // Work arrays for Thomas algorithm
@@ -478,8 +509,8 @@ export const CrankNicolson = (
         const d: Float64Array = modifiedRHS;
 
         // Left boundary i = 0, using ghost cell u_{-1} = u_1 for zero flux
-        // B coefficients: λ u_{i-1}^n + (1 - 2λ - β) u_i^n + λ u_{i+1}^n
-        // Substituting u_{-1} = u_1: λ u_1 + (1 - 2λ - β) u_0 + λ u_1
+        // B coefficients: λ u_{i-1}^n + (1 - 2λ - β[i]) u_i^n + λ u_{i+1}^n
+        // Substituting u_{-1} = u_1: λ u_1 + (1 - 2λ - β[0]) u_0 + λ u_1
         {
             const i: number = 0;
             const u_im1: number = u[1];       // ghost cell: u_{-1} = u_1
@@ -488,7 +519,7 @@ export const CrankNicolson = (
 
             const rhsVal: number =
                 lambda * u_im1 +
-                (1.0 - 2.0 * lambda - beta) * u_i +
+                (1.0 - 2.0 * lambda - beta[i]) * u_i +
                 lambda * u_ip1 +
                 dt * sources[i];
 
@@ -503,7 +534,7 @@ export const CrankNicolson = (
 
             const rhsVal: number =
                 lambda * u_im1 +
-                (1.0 - 2.0 * lambda - beta) * u_i +
+                (1.0 - 2.0 * lambda - beta[i]) * u_i +
                 lambda * u_ip1 +
                 dt * sources[i];
 
@@ -511,7 +542,7 @@ export const CrankNicolson = (
         }
 
         // Right boundary i = N-1, using ghost cell u_n = u_{n-2} for zero flux
-        // Substituting u_n = u_{n-2}: λ u_{n-2} + (1 - 2λ - β) u_{n-1} + λ u_{n-2}
+        // Substituting u_n = u_{n-2}: λ u_{n-2} + (1 - 2λ - β[N-1]) u_{n-1} + λ u_{n-2}
         {
             const i: number = N - 1;
             const u_im1: number = u[N - 2];
@@ -520,7 +551,7 @@ export const CrankNicolson = (
 
             const rhsVal: number =
                 lambda * u_im1 +
-                (1.0 - 2.0 * lambda - beta) * u_i +
+                (1.0 - 2.0 * lambda - beta[i]) * u_i +
                 lambda * u_ip1 +
                 dt * sources[i];
 
@@ -529,7 +560,7 @@ export const CrankNicolson = (
 
         // Solve A u^{n+1} = d
         thomasAlgorithm(
-            lowreDiagoal,
+            lowerDiagoal,
             mainDiagnal,
             upperDiagnal,
             d,

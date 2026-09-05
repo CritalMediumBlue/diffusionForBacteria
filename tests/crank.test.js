@@ -22,6 +22,7 @@ const testCases = [
 testCases.forEach(({ diffusionCoefficient, decayRate, deltaX, totalTime }) => {
 	test(`Crank-Nicolson vs ADI: D=${diffusionCoefficient}, k=${decayRate}, dx=${deltaX}, totalTime=${totalTime}`, () => {
 		const deltaT = 0.1;
+		const beta = new Float64Array(length).fill(decayRate * deltaT / 2.0);
 		const totalIterations = Math.floor(totalTime / deltaT);
 
 		// Create fresh copies of sources for each test
@@ -48,7 +49,7 @@ testCases.forEach(({ diffusionCoefficient, decayRate, deltaX, totalTime }) => {
 
 		ADI(numericalSolutionUsingADI, totalIterations, true);
 
-		setCNProperties(length, diffusionCoefficient, deltaX, deltaT, decayRate);
+		setCNProperties(length, diffusionCoefficient, deltaX, deltaT, beta);
 		CrankNicolson(numericalSolutionUsingCrankNicolson, sources1D, totalIterations, true);
 
 		for (let i = 0; i < length; i++) {
@@ -71,8 +72,9 @@ test("Crank-Nicolson matches analytical decay of cos mode", () => {
 		u[i] = 0.5 + 0.5 * Math.cos(q * i);
 	}
 	const sources = new Float64Array(length).fill(0);
+	const beta = new Float64Array(length).fill(k * deltaT / 2.0);
 
-	setCNProperties(length, D, deltaX, deltaT, k);
+	setCNProperties(length, D, deltaX, deltaT, beta);
 	CrankNicolson(u, sources, totalIterations, true);
 
 	for (let i = 0; i < length; i++) {
