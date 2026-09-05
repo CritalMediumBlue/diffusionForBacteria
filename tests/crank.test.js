@@ -58,3 +58,27 @@ testCases.forEach(({ diffusionCoefficient, decayRate, deltaX, totalTime }) => {
 		}
 	});
 });
+
+test("Crank-Nicolson matches analytical decay of cos mode", () => {
+	const length = 1200, deltaX = 1.0, deltaT = 0.1;
+	const D = 2, k = 0.01;
+	const q = Math.PI / length;
+	const totalTime = 50;
+	const totalIterations = Math.floor(totalTime / deltaT);
+
+	const u = new Float64Array(length);
+	for (let i = 0; i < length; i++) {
+		u[i] = 0.5 + 0.5 * Math.cos(q * i);
+	}
+	const sources = new Float64Array(length).fill(0);
+
+	setCNProperties(length, D, deltaX, deltaT, k);
+	CrankNicolson(u, sources, totalIterations, true);
+
+	for (let i = 0; i < length; i++) {
+		const exact =
+			0.5 * Math.exp(-k * totalTime) +
+			0.5 * Math.exp(-(D * q * q + k) * totalTime) * Math.cos(q * i);
+		expect(u[i]).toBeCloseTo(exact, 2);
+	}
+});

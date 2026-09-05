@@ -1,14 +1,21 @@
 # Crank--Nicolson Method
 
-We consider a substance with concentration $u(x,t)$ that diffuses in one spatial dimension with a constant diffusion coefficient $D$. Individual bacteria may secrete the substance into the extracellular environment or remove it through uptake.
+## Biological problem
+
+We consider a substance with concentration $u(x,t)$ that diffuses in one spatial dimension with a constant diffusion coefficient $D$. Bacteria living in this 1 dimensional space may secrete the substance into the environment or remove it through uptake.
 
 :::{.callout-note title="Dimensions and units"}
-In this implementation, we use the following dimensions and units:
+
+We use the following dimensions and units:
 
 - $M$ denotes 'amount of substance' (e.g. units of moles, molecules, or mass).
 - $L$ denotes the length (e.g. µm), 
 - $T$ denotes time (e.g. seconds).
+
+Where dimension-generic expressions are given, $d$ denotes the number of spatial dimensions. For this document $d=1$.
 :::
+
+ 
 
 ## Equation to solve
 
@@ -26,18 +33,17 @@ $$ {#eq-diffusion-source-sink}
 
 Here,
 
-- $u(x,t)$ is the extracellular concentration in units of $M/L$.
+- $u(x,t)$ is the extracellular concentration in units of $M/L^d$.
+- $\frac{\partial^2 u}{\partial x^2}$ is the second spatial derivative in units of $M/L^{d+2}$.
 - $D$ is the diffusion coefficient in units of $L^2/T$.
-- $O(x)$ is the source term, representing production of the substance in units of $M/(L\,T)$.
-- $I(x,u,t)$ is the sink term, representing uptake of the substance in units of $M/(L\,T)$.
+- $O(x)$ is the source term, representing production of $u$ in units of $M/(L^d\,T)$.
+- $I(x,u,t)$ is the sink term, representing uptake of $u$ in units of $M/(L^d\,T)$.
 
 
 ## Point-like sources and sinks
 
 Let $B_o$ denote the set of secreting bacteria and $B_i$ the set of consuming bacteria. Let $x_s$ be the position of bacterium $s$, and let $i_s$ be the grid index of the cell to which that bacterium is assigned. For example, $i_s$ may be chosen as the index of the nearest grid cell.
 
-All secreting bacteria are assumed to have the same per-cell secretion rate $K_O$ in units of $M/T$
-, and all consuming bacteria are assumed to have the same first-order uptake coefficient $K_I$ in units of $L/T$.
 The bacteria are represented as point-like sources and sinks using Dirac delta functions
 
 $$
@@ -55,17 +61,26 @@ K_I\,u(x,t)
 \sum_{s\in B_i}
 \delta(x-x_s).
 $$
+$K_O$ is the **per-cell secretion rate** or **point-source strength**. It specifies the amount of substance secreted by one bacterium per unit time. All secreting bacteria are assumed to have the same $K_O$, with units of $M/T$. This is an intrinsic bacterial property independent of the geometry of space.
 
-Here, $K_O$ is the **per-cell secretion rate** or **point-source strength**. It specifies the amount of substance secreted by one bacterium per unit time. The parameter $K_I$ is the **per-cell first-order uptake coefficient**. Thus, the uptake rate of a consuming bacterium is proportional to the local extracellular concentration.
-
-The secretion term is independent of concentration and is assumed constant in time during the simulated interval. The uptake term follows a first-order uptake law.
+$K_I$ is the **per-cell first-order uptake coefficient**. The uptake rate of a consuming bacterium is proportional to the local extracellular concentration. All consuming bacteria are assumed to have the same $K_I$. Unlike $K_O$, the units of $K_I$ depend on the spatial dimension $d$: $K_I$ carries units of $L^d / T$, because the Dirac delta function $\delta(x)$ has units of $1/L^d$ and the sink term $I = K_I\, u\, \delta$ must have units of $M/(L^d\, T)$. In one spatial dimension $(d=1)$, $K_I$ therefore has units of $L/T$.
 
 ## Spatial discretization
 
-Let the spatial domain be discretized on a uniform grid with spacing $\Delta x$, and let $u_i^n$ approximate $u(x_i,t^n)$. Define the discrete Laplacian by
+The domain is discretized on a uniform grid of $N$ points with spacing `dx` ($\Delta x$) and time step `dt` ($\Delta t$); the array `u` stores $u_i^n \approx u(x_i, t^n)$. These variables are declared at module scope and are shared between `setCNProperties` (which initializes them from its parameters `length`, `deltaX`, and `deltaT`) and `CrankNicolson` (which uses them during time stepping).
+
+```{.typescript #concentration-array-and-spacing}
+let N: number;
+let dx: number;
+let dt: number;
+let u: Float64Array;
+```
+
+
+The discrete Laplacian by
 
 $$
-L(u_i^n)
+\nabla^2(u_i^n)
 =
 \frac{u_{i-1}^n - 2u_i^n + u_{i+1}^n}{\Delta x^2}.
 $$ {#eq-laplacian}
@@ -91,6 +106,8 @@ $$
 
 The factor $1/\Delta x$ represents each point-like bacterium as a source or sink distributed over its assigned grid cell. Consequently, integrating the discrete source or sink over that cell recovers the secretion or uptake associated with that bacterium.
 
+Note that $\delta_{i,i_s}$ is the Kronecker delta, which is dimensionless (unlike the Dirac delta $\delta(x)$ used in the continuous case, which has units of $1/L^d$).
+
 
 ## Crank--Nicolson discretization
 
@@ -101,7 +118,7 @@ $$
 =
 \frac{D}{2}
 \left[
-L(u_i^{n+1}) + L(u_i^n)
+\nabla^2(u_i^{n+1}) + \nabla^2(u_i^n)
 \right]
 +
 O_i
@@ -113,7 +130,8 @@ I_i^{n+1} + I_i^n
 $${#eq-crank-nicolson}
 
 Inserting the explicit forms of the discrete Laplacian, source, and sink into
-@eq-crank-nicolson gives 
+@eq-crank-nicolson and multiplying by $\Delta t$, we arrive at the linear system
+
 
 $$
 \begin{aligned}
@@ -145,13 +163,19 @@ u_i^{n+1} - u_i^n
 $$ {#eq-crank-nicolson-expanded}
 
 
-For convenience, define the dimensionless diffusion parameter
+For convenience, define the dimensionless parameters 
 
 $$
 \lambda
 =
-\frac{D \Delta t}{2\Delta x^2}.
+\frac{D \Delta t}{2\Delta x^2} \qquad \beta_i = \frac{K_I \Delta t}{2\Delta x}
+\sum_{s\in B_i}
+\delta_{i,i_s}
 $$
+
+```{.typescript #dimensionless}
+let lambda: number;
+```
 
 Define the contribution of the source term to the concentration over one time step as
 
@@ -216,6 +240,8 @@ $$ {#eq-crank-nicolson-tridiagonal}
 
 This equation applies to every grid point $i=0,\ldots,N$.
 
+:::{.callout-note collapse=true title='Example with $N=3$'}
+
 If we apply this equation to $4$ grid points ($i=0,1,2,3$), we obtain a system of $4$ linear equations for the unknowns $u_i^{n+1}$ 
 
 $$
@@ -257,14 +283,14 @@ $$
 +q_3.
 \end{aligned}
 $$
-Here, the red terms correspond to cells outside the domain which represent the boundary conditions. These are set to a constant value in the case of Dirichlet boundary conditions, or set to the value of the nearest interior cell in the case of Neumann (zero-flux) boundary conditions. For this implementation, we use Neumann boundary conditions. This way, by setting $u_{-1} = u_0$ and $u_4 = u_3$, we can eliminate the red terms, giving 
+Here, the red terms correspond to cells outside the domain which represent the boundary conditions. These are set to a constant value in the case of Dirichlet boundary conditions, or set via centered difference mirroring in the case of Neumann (zero-flux) boundary conditions. For this implementation, we use Neumann zero-flux boundary conditions. With centered differences, zero flux at the left boundary implies $u_{-1} = u_1$, and at the right boundary $u_{N} = u_{N-2}$. This way, by setting $u_{-1} = u_1$ and $u_4 = u_2$, we can eliminate the red terms, giving 
 
 $$
 \begin{aligned}
-\left(1 + \lambda + \beta_0\right) u_0^{n+1} - \lambda u_{1}^{n+1}
+\left(1 + 2\lambda + \beta_0\right) u_0^{n+1} - 2\lambda u_{1}^{n+1}
 ={}&
-\left(1 - \lambda - \beta_0\right) u_0^n
-+\lambda u_{1}^{n}
+\left(1 - 2\lambda - \beta_0\right) u_0^n
++ 2\lambda u_{1}^{n}
 +q_0,
 \\
 - \lambda u_{0}^{n+1}
@@ -277,8 +303,7 @@ $$
 +q_1,
 \\
 - \lambda u_{1}^{n+1}
-+ \left(1 + 2\lambda + \beta_2\right) u
-_2^{n+1}
++ \left(1 + 2\lambda + \beta_2\right) u_2^{n+1}
 - \lambda u_{3}^{n+1}
 ={}&
  \lambda u_{1}^{n}
@@ -286,11 +311,11 @@ _2^{n+1}
 +\lambda u_{3}^{n}
 +q_2,
 \\
-- \lambda u_{2}^{n+1}
-+ \left(1 + \lambda + \beta_3\right) u_3^{n+1}
+- 2\lambda u_{2}^{n+1}
++ \left(1 + 2\lambda + \beta_3\right) u_3^{n+1}
 ={}&
- \lambda u_{2}^{n}
-+\left(1 - \lambda - \beta_3\right) u_3^n
+ 2\lambda u_{2}^{n}
++\left(1 - 2\lambda - \beta_3\right) u_3^n
 +q_3.
 \end{aligned}
 $$
@@ -300,24 +325,24 @@ This is a tridiagonal system that can be represented in matrix form as $A u^{n+1
 $$
 A =
 \begin{bmatrix}
-1 + \lambda + \beta_0 & -\lambda & 0 & 0 \\
+1 + 2\lambda + \beta_0 & -2\lambda & 0 & 0 \\
 -\lambda & 1 + 2\lambda + \beta_1 & -\lambda & 0 \\
 0 & -\lambda & 1 + 2\lambda + \beta_2 & -\lambda \\
-0 & 0 & -\lambda & 1 + \lambda + \beta_3
+0 & 0 & -2\lambda & 1 + 2\lambda + \beta_3
 \end{bmatrix},
 $$
 and the right-hand side vector $d$ is
 $$
 d =
 \begin{bmatrix}
-\left(1 - \lambda - \beta_0\right) u_0^n + \lambda u_1^n + q_0 \\
+\left(1 - 2\lambda - \beta_0\right) u_0^n + 2\lambda u_1^n + q_0 \\
 \lambda u_0^n + \left(1 - 2\lambda - \beta_1\right) u_1^n + \lambda u_2^n + q_1 \\
 \lambda u_1^n + \left(1 - 2\lambda - \beta_2\right) u_2^n + \lambda u_3^n + q_2 \\
-\lambda u_2^n + \left(1 - \lambda - \beta_3\right) u_3^n + q_3
+2\lambda u_2^n + \left(1 - 2\lambda - \beta_3\right) u_3^n + q_3
 \end{bmatrix}.
 $$
 
-
+:::
 
 ## Imports
 
@@ -332,20 +357,16 @@ import { thomasAlgorithm } from "./thomasAlgorithm.js";
 
 ```{.typescript #cn-variables}
 // Module-level variables for Crank-Nicolson
-let LENGTH: number;
+
 let lowreDiagoal: Float64Array;
 let mainDiagnal: Float64Array;
 let upperDiagnal: Float64Array;
 let modifiedUpper: Float64Array;
 let modifiedRHS: Float64Array;
 let solution: Float64Array;
-let u: Float64Array;
 let uNext: Float64Array;
-let lambda: number;
 let beta: number;
-let halfLambda: number;
 let centerCoeff: number;
-let dt: number;
 ```
 
 ## Setting up the Crank‑Nicolson coefficients
@@ -360,52 +381,52 @@ ghost‑cell mirroring.
 
 export const setCNProperties = (
     length: number,
-    diffusionCoefficient: number,
+    D: number,
     deltaX: number,
     deltaT: number,
     decayRate: number = 0,
 ): void => {
-    LENGTH = length;
+    N = length;
     dt = deltaT;
+    dx = deltaX;
 
     // Calculate coefficients
-    lambda = (diffusionCoefficient * deltaT) / (deltaX * deltaX);
+    lambda = (D * deltaT) / (2.0 * deltaX * deltaX);
     beta = (decayRate * deltaT) / 2.0;
-    halfLambda = 0.5 * lambda;
-    centerCoeff = 1.0 + lambda + beta;
+    centerCoeff = 1.0 + 2.0 * lambda + beta;
 
     // Tridiagonal coefficients for A (left-hand side)
-    lowreDiagoal = new Float64Array(LENGTH);
-    mainDiagnal = new Float64Array(LENGTH);
-    upperDiagnal = new Float64Array(LENGTH);
+    lowreDiagoal = new Float64Array(N);
+    mainDiagnal = new Float64Array(N);
+    upperDiagnal = new Float64Array(N);
 
     // Interior coefficients
-    for (let i: number = 1; i < LENGTH - 1; i++) {
-        lowreDiagoal[i] = -halfLambda;
+    for (let i: number = 1; i < N - 1; i++) {
+        lowreDiagoal[i] = -lambda;
         mainDiagnal[i] = centerCoeff;
-        upperDiagnal[i] = -halfLambda;
+        upperDiagnal[i] = -lambda;
     }
 
     // Neumann (reflective) boundaries using centered differences with ghost cells
     // u_{-1} = u_1 and u_n = u_{n-2} for zero flux
-    // Left boundary i = 0: stencil becomes (1+λ+β)u_0 - λu_1
+    // Left boundary i = 0: stencil becomes (1+2λ+β)u_0 - 2λu_1
     lowreDiagoal[0] = 0.0;
     mainDiagnal[0] = centerCoeff;
-    upperDiagnal[0] = -lambda;
+    upperDiagnal[0] = -2.0 * lambda;
 
-    // Right boundary i = LENGTH-1: stencil becomes -λu_{n-2} + (1+λ+β)u_{n-1}
-    lowreDiagoal[LENGTH - 1] = -lambda;
-    mainDiagnal[LENGTH - 1] = centerCoeff;
-    upperDiagnal[LENGTH - 1] = 0.0;
+    // Right boundary i = N-1: stencil becomes -2λu_{n-2} + (1+2λ+β)u_{n-1}
+    lowreDiagoal[N - 1] = -2.0 * lambda;
+    mainDiagnal[N - 1] = centerCoeff;
+    upperDiagnal[N - 1] = 0.0;
 
     // Work arrays for Thomas algorithm
-    modifiedUpper = new Float64Array(LENGTH);
-    modifiedRHS = new Float64Array(LENGTH);
-    solution = new Float64Array(LENGTH);
+    modifiedUpper = new Float64Array(N);
+    modifiedRHS = new Float64Array(N);
+    solution = new Float64Array(N);
 
     // Solution arrays
-    u = new Float64Array(LENGTH);
-    uNext = new Float64Array(LENGTH);
+    u = new Float64Array(N);
+    uNext = new Float64Array(N);
 };
 ```
 
@@ -430,7 +451,7 @@ export const CrankNicolson = (
     allowNegativeValues: boolean = false,
 ): void => {
     // Copy initial condition
-    for (let i: number = 0; i < LENGTH; i++) {
+    for (let i: number = 0; i < N; i++) {
         u[i] = concentrationData[i];
     }
 
@@ -440,8 +461,8 @@ export const CrankNicolson = (
         const d: Float64Array = modifiedRHS;
 
         // Left boundary i = 0, using ghost cell u_{-1} = u_1 for zero flux
-        // B coefficients: (λ/2) u_{i-1}^n + (1 - λ - β) u_i^n + (λ/2) u_{i+1}^n
-        // Substituting u_{-1} = u_1: (λ/2) u_1 + (1 - λ - β) u_0 + (λ/2) u_1
+        // B coefficients: λ u_{i-1}^n + (1 - 2λ - β) u_i^n + λ u_{i+1}^n
+        // Substituting u_{-1} = u_1: λ u_1 + (1 - 2λ - β) u_0 + λ u_1
         {
             const i: number = 0;
             const u_im1: number = u[1];       // ghost cell: u_{-1} = u_1
@@ -449,41 +470,41 @@ export const CrankNicolson = (
             const u_ip1: number = u[1];
 
             const rhsVal: number =
-                halfLambda * u_im1 +
-                (1.0 - lambda - beta) * u_i +
-                halfLambda * u_ip1 +
+                lambda * u_im1 +
+                (1.0 - 2.0 * lambda - beta) * u_i +
+                lambda * u_ip1 +
                 dt * sources[i];
 
             d[i] = rhsVal;
         }
 
-        // Interior points 1..LENGTH-2
-        for (let i: number = 1; i < LENGTH - 1; i++) {
+        // Interior points 1..N-2
+        for (let i: number = 1; i < N - 1; i++) {
             const u_im1: number = u[i - 1];
             const u_i: number   = u[i];
             const u_ip1: number = u[i + 1];
 
             const rhsVal: number =
-                halfLambda * u_im1 +
-                (1.0 - lambda - beta) * u_i +
-                halfLambda * u_ip1 +
+                lambda * u_im1 +
+                (1.0 - 2.0 * lambda - beta) * u_i +
+                lambda * u_ip1 +
                 dt * sources[i];
 
             d[i] = rhsVal;
         }
 
-        // Right boundary i = LENGTH-1, using ghost cell u_n = u_{n-2} for zero flux
-        // Substituting u_n = u_{n-2}: (λ/2) u_{n-2} + (1 - λ - β) u_{n-1} + (λ/2) u_{n-2}
+        // Right boundary i = N-1, using ghost cell u_n = u_{n-2} for zero flux
+        // Substituting u_n = u_{n-2}: λ u_{n-2} + (1 - 2λ - β) u_{n-1} + λ u_{n-2}
         {
-            const i: number = LENGTH - 1;
-            const u_im1: number = u[LENGTH - 2];
-            const u_i: number   = u[LENGTH - 1];
-            const u_ip1: number = u[LENGTH - 2];   // ghost cell: u_n = u_{n-2}
+            const i: number = N - 1;
+            const u_im1: number = u[N - 2];
+            const u_i: number   = u[N - 1];
+            const u_ip1: number = u[N - 2];   // ghost cell: u_n = u_{n-2}
 
             const rhsVal: number =
-                halfLambda * u_im1 +
-                (1.0 - lambda - beta) * u_i +
-                halfLambda * u_ip1 +
+                lambda * u_im1 +
+                (1.0 - 2.0 * lambda - beta) * u_i +
+                lambda * u_ip1 +
                 dt * sources[i];
 
             d[i] = rhsVal;
@@ -495,7 +516,7 @@ export const CrankNicolson = (
             mainDiagnal,
             upperDiagnal,
             d,
-            LENGTH,
+            N,
             modifiedUpper,
             modifiedRHS,
             solution,
@@ -503,7 +524,7 @@ export const CrankNicolson = (
 
         // Copy solution and optionally check for negativity
         let hasNegative: boolean = false;
-        for (let i: number = 0; i < LENGTH; i++) {
+        for (let i: number = 0; i < N; i++) {
             uNext[i] = solution[i];
             if (!allowNegativeValues && uNext[i] < 0) {
                 hasNegative = true;
@@ -523,7 +544,7 @@ export const CrankNicolson = (
     }
 
     // Copy result back to concentrationData
-    for (let i: number = 0; i < LENGTH; i++) {
+    for (let i: number = 0; i < N; i++) {
         concentrationData[i] = u[i];
     }
 };
@@ -535,6 +556,8 @@ The final code block tells Entangled to write the file
 `src/crankNicolson.js` by concatenating all the pieces defined above.
 
 ```{.typescript file=src/crankNicolson.ts}
+<<concentration-array-and-spacing>>
+<<dimensionless>>
 <<cn-imports>>
 
 <<cn-variables>>
