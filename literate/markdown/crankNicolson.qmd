@@ -419,6 +419,7 @@ let modifiedRHS: Float64Array;
 let solution: Float64Array;
 let uNext: Float64Array;
 let beta: Float64Array;
+let scaledSources: Float64Array;
 ```
 
 ## Setting up the Crank‑Nicolson coefficients
@@ -436,12 +437,27 @@ export const setCNProperties = (
     D: number,
     deltaX: number,
     deltaT: number,
-    betaArray: Float64Array,
+    K_I: number,
+    K_O: number,
+    sinkCounts: Float64Array,
+    sourceCounts: Float64Array,
+    rebuildMatrix: boolean,
 ): void => {
     <<definition-inside-cn>>
     // Calculate coefficients
     <<compute-lambda>>
-    beta = betaArray;
+    beta = new Float64Array(N);
+    scaledSources = new Float64Array(N);
+    const betaFactor = (K_I * dt) / (2.0 * dx);
+    const sourceFactor = (K_O * dt) / dx;
+    for (let i: number = 0; i < N; i++) {
+        beta[i] = betaFactor * sinkCounts[i];
+        scaledSources[i] = sourceFactor * sourceCounts[i];
+    }
+
+    if (!rebuildMatrix) {
+        return;
+    }
 
     // Tridiagonal coefficients for A (left-hand side)
     lowerDiagoal = new Float64Array(N);
@@ -494,7 +510,6 @@ If a negative concentration appears and `allowNegativeValues` is
 
 export const CrankNicolson = (
     concentrationData: Float64Array,
-    sources: Float64Array,
     totalNumberOfIterations: number,
     allowNegativeValues: boolean = false,
 ): void => {
@@ -521,7 +536,7 @@ export const CrankNicolson = (
                 lambda * u_im1 +
                 (1.0 - 2.0 * lambda - beta[i]) * u_i +
                 lambda * u_ip1 +
-                dt * sources[i];
+                scaledSources[i];
 
             d[i] = rhsVal;
         }
@@ -536,7 +551,7 @@ export const CrankNicolson = (
                 lambda * u_im1 +
                 (1.0 - 2.0 * lambda - beta[i]) * u_i +
                 lambda * u_ip1 +
-                dt * sources[i];
+                scaledSources[i];
 
             d[i] = rhsVal;
         }
@@ -553,7 +568,7 @@ export const CrankNicolson = (
                 lambda * u_im1 +
                 (1.0 - 2.0 * lambda - beta[i]) * u_i +
                 lambda * u_ip1 +
-                dt * sources[i];
+                scaledSources[i];
 
             d[i] = rhsVal;
         }

@@ -1,4 +1,3 @@
-
 import { CrankNicolson, setCNProperties } from "../literate/src/index.js";
 import { expect, test } from "vitest";
 
@@ -13,11 +12,13 @@ test("zero iterations leaves the field unchanged", () => {
 	const D = 2, k = 0.01, dt = 0.1;
 	const u0 = new Float64Array(length).map((_, i) => Math.cos((2 * Math.PI * i * deltaX) / L));
 	const u = Float64Array.from(u0);
-	const sources = new Float64Array(length).fill(0);
-	const beta = new Float64Array(length).fill(k * dt / 2.0);
+	const sourceCounts = new Float64Array(length).fill(0);
+	const sinkCounts = new Float64Array(length).fill(1);
+	const K_I = k * deltaX;
+	const K_O = 0;
 
-	setCNProperties(length, D, deltaX, dt, beta);
-	CrankNicolson(u, sources, 0, true);
+	setCNProperties(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CrankNicolson(u, 0, true);
 
 	for (let i = 0; i < length; i++) {
 		expect(u[i]).toBeCloseTo(u0[i], 12);
@@ -30,11 +31,13 @@ test("zero iterations leaves the field unchanged", () => {
 test("uniform field with no source/decay stays constant", () => {
 	const D = 2, k = 0, dt = 0.1, C = 0.7;
 	const u = new Float64Array(length).fill(C);
-	const sources = new Float64Array(length).fill(0);
-	const beta = new Float64Array(length).fill(k * dt / 2.0);
+	const sourceCounts = new Float64Array(length).fill(0);
+	const sinkCounts = new Float64Array(length).fill(0);
+	const K_I = k * deltaX;
+	const K_O = 0;
 
-	setCNProperties(length, D, deltaX, dt, beta);
-	CrankNicolson(u, sources, 500, true);
+	setCNProperties(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CrankNicolson(u, 500, true);
 
 	for (let i = 0; i < length; i++) {
 		expect(u[i]).toBeCloseTo(C, 8);
@@ -49,11 +52,13 @@ test("uniform field decays exponentially, independent of D", () => {
 	const totalTime = 50;
 	const iterations = Math.floor(totalTime / dt);
 	const u = new Float64Array(length).fill(C);
-	const sources = new Float64Array(length).fill(0);
-	const beta = new Float64Array(length).fill(k * dt / 2.0);
+	const sourceCounts = new Float64Array(length).fill(0);
+	const sinkCounts = new Float64Array(length).fill(1);
+	const K_I = k * deltaX;
+	const K_O = 0;
 
-	setCNProperties(length, D, deltaX, dt, beta);
-	CrankNicolson(u, sources, iterations, true);
+	setCNProperties(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CrankNicolson(u, iterations, true);
 
 	const expected = C * Math.exp(-k * totalTime);
 	for (let i = 0; i < length; i++) {
@@ -72,11 +77,13 @@ test("uniform field decays exponentially, independent of D", () => {
 		const iterations = Math.floor(totalTime / dt);
 
 		const u = new Float64Array(length).map((_, i) => Math.cos((n * Math.PI * (i * deltaX)) / L));
-		const sources = new Float64Array(length).fill(0);
-		const beta = new Float64Array(length).fill(k * dt / 2.0);
+		const sourceCounts = new Float64Array(length).fill(0);
+		const sinkCounts = new Float64Array(length).fill(1);
+		const K_I = k * deltaX;
+		const K_O = 0;
 
-		setCNProperties(length, D, deltaX, dt, beta);
-		CrankNicolson(u, sources, iterations, true);
+		setCNProperties(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+		CrankNicolson(u, iterations, true);
 
 		const lambda = k + D * Math.pow((n * Math.PI) / L, 2);
 		const decay = Math.exp(-lambda * totalTime);
@@ -95,13 +102,15 @@ test("uniform field decays exponentially, independent of D", () => {
 test("total mass is conserved with reflective BC (no source/decay)", () => {
 	const D = 3, k = 0, dt = 0.1;
 	const u = new Float64Array(length).map((_, i) => (i > length / 3 && i < (2 * length) / 3 ? 2.0 : 0.2));
-	const sources = new Float64Array(length).fill(0);
+	const sourceCounts = new Float64Array(length).fill(0);
+	const sinkCounts = new Float64Array(length).fill(0);
+	const K_I = k * deltaX;
+	const K_O = 0;
 
 	const massBefore = u.reduce((a, b) => a + b, 0) * deltaX;
 
-	const beta = new Float64Array(length).fill(k * dt / 2.0);
-	setCNProperties(length, D, deltaX, dt, beta);
-	CrankNicolson(u, sources, 2000, true);
+	setCNProperties(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CrankNicolson(u, 2000, true);
 
 	const massAfter = u.reduce((a, b) => a + b, 0) * deltaX;
 	expect(massAfter).toBeCloseTo(massBefore, 3);
@@ -116,12 +125,14 @@ test("mass grows linearly with constant source under reflective BC", () => {
 	const iterations = Math.floor(totalTime / dt);
 
 	const u = new Float64Array(length).fill(0.5);
-	const sources = new Float64Array(length).fill(S0);
+	const sourceCounts = new Float64Array(length).fill(1);
+	const sinkCounts = new Float64Array(length).fill(0);
+	const K_I = k * deltaX;
+	const K_O = S0 * deltaX;
 	const massBefore = u.reduce((a, b) => a + b, 0) * deltaX;
-	const beta = new Float64Array(length).fill(k * dt / 2.0);
 
-	setCNProperties(length, D, deltaX, dt, beta);
-	CrankNicolson(u, sources, iterations, true);
+	setCNProperties(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CrankNicolson(u, iterations, true);
 
 	const massAfter = u.reduce((a, b) => a + b, 0) * deltaX;
 	const expectedGrowth = S0 * (length * deltaX) * totalTime;
@@ -134,11 +145,13 @@ test("mass grows linearly with constant source under reflective BC", () => {
 test("converges to uniform steady state S0/k with constant source and decay", () => {
 	const D = 2, k = 0.05, dt = 0.1, S0 = 0.02;
 	const u = new Float64Array(length).fill(0);
-	const sources = new Float64Array(length).fill(S0);
-	const beta = new Float64Array(length).fill(k * dt / 2.0);
+	const sourceCounts = new Float64Array(length).fill(1);
+	const sinkCounts = new Float64Array(length).fill(1);
+	const K_I = k * deltaX;
+	const K_O = S0 * deltaX;
 
-	setCNProperties(length, D, deltaX, dt, beta);
-	CrankNicolson(u, sources, 20000, true); // run long enough to reach steady state
+	setCNProperties(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CrankNicolson(u, 20000, true); // run long enough to reach steady state
 
 	const expected = S0 / k;
 	for (let i = 0; i < length; i++) {
@@ -152,11 +165,13 @@ test("converges to uniform steady state S0/k with constant source and decay", ()
 test("symmetric initial condition remains symmetric in time", () => {
 	const D = 2, k = 0.01, dt = 0.1;
 	const u = new Float64Array(length).map((_, i) => Math.cos((2 * Math.PI * i * deltaX) / L)); // symmetric about midpoint
-	const sources = new Float64Array(length).fill(0);
-	const beta = new Float64Array(length).fill(k * dt / 2.0);
+	const sourceCounts = new Float64Array(length).fill(0);
+	const sinkCounts = new Float64Array(length).fill(1);
+	const K_I = k * deltaX;
+	const K_O = 0;
 
-	setCNProperties(length, D, deltaX, dt, beta);
-	CrankNicolson(u, sources, 500, true);
+	setCNProperties(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CrankNicolson(u, 500, true);
 
 	for (let i = 0; i < length; i++) {
 		expect(u[i]).toBeCloseTo(u[length - 1 - i], 6);
