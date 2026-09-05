@@ -65,19 +65,39 @@ $K_O$ is the **per-cell secretion rate** or **point-source strength**. It specif
 
 $K_I$ is the **per-cell first-order uptake coefficient**. The uptake rate of a consuming bacterium is proportional to the local extracellular concentration. All consuming bacteria are assumed to have the same $K_I$. Unlike $K_O$, the units of $K_I$ depend on the spatial dimension $d$: $K_I$ carries units of $L^d / T$, because the Dirac delta function $\delta(x)$ has units of $1/L^d$ and the sink term $I = K_I\, u\, \delta$ must have units of $M/(L^d\, T)$. In one spatial dimension $(d=1)$, $K_I$ therefore has units of $L/T$.
 
-## Spatial discretization
+## Grid and state variables
 
-The domain is discretized on a uniform grid of $N$ points with spacing `dx` ($\Delta x$) and time step `dt` ($\Delta t$); the array `u` stores $u_i^n \approx u(x_i, t^n)$. These variables are declared at module scope and are shared between `setCNProperties` (which initializes them from its parameters `length`, `deltaX`, and `deltaT`) and `CrankNicolson` (which uses them during time stepping).
+The domain is discretized on a uniform grid of `N` ($N$) points with spacing `dx` ($\Delta x$) and time step `dt` ($\Delta t$). These variables are declared at module scope as
 
-```{.typescript #concentration-array-and-spacing}
+```{.typescript #concentration-array-and-spacing filename="concentration-array-and-spacing"}
 let N: number;
 let dx: number;
 let dt: number;
-let u: Float64Array;
+```
+
+and their values are initialized
+in `setCNProperties` from its parameters `length`, `deltaX`, and `deltaT`)
+
+
+```{.typescript #definition-inside-cn filename="definition-inside-cn" }
+N = length;
+dx = deltaX;
+dt = deltaT;
 ```
 
 
-The discrete Laplacian by
+
+which `CrankNicolson` can then use during time stepping.
+
+The array `u` stores $u_i^n$, which approximates $u(x_i, t^n)$
+
+```{.typescript #array-u filename="array-u"}
+let u: Float64Array;
+```
+
+## Discrete Laplacian and source terms
+
+The Laplacian is discretized as follows
 
 $$
 \nabla^2(u_i^n)
@@ -173,7 +193,7 @@ $$
 \delta_{i,i_s}
 $$
 
-```{.typescript #dimensionless}
+```{.typescript #dimensionless filename="dimensionless"}
 let lambda: number;
 ```
 
@@ -349,15 +369,15 @@ $$
 We import the Thomas algorithm solver that will be used to solve the
 tridiagonal system at each time step:
 
-```{.typescript #cn-imports}
+```{.typescript #cn-imports filename="cn-imports"}
 import { thomasAlgorithm } from "./thomasAlgorithm.js";
 ```
 
 ## Module‑level state
 
-```{.typescript #cn-variables}
+```{.typescript #cn-variables filename="cn-variables"}
 // Module-level variables for Crank-Nicolson
-
+<<array-u>>
 let lowreDiagoal: Float64Array;
 let mainDiagnal: Float64Array;
 let upperDiagnal: Float64Array;
@@ -377,7 +397,7 @@ tridiagonal system. Neumann (zero‑flux) boundary conditions are
 implemented by adjusting the first and last rows of the matrix using
 ghost‑cell mirroring.
 
-```{.typescript #cn-set-properties}
+```{.typescript #cn-set-properties filename="cn-set-properties"}
 
 export const setCNProperties = (
     length: number,
@@ -386,10 +406,7 @@ export const setCNProperties = (
     deltaT: number,
     decayRate: number = 0,
 ): void => {
-    N = length;
-    dt = deltaT;
-    dx = deltaX;
-
+    <<definition-inside-cn>>
     // Calculate coefficients
     lambda = (D * deltaT) / (2.0 * deltaX * deltaX);
     beta = (decayRate * deltaT) / 2.0;
@@ -442,7 +459,7 @@ the solution arrays for the next iteration.
 If a negative concentration appears and `allowNegativeValues` is
 `false`, the function throws an error.
 
-```{.typescript #cn-main-function}
+```{.typescript #cn-main-function filename="cn-main-function"}
 
 export const CrankNicolson = (
     concentrationData: Float64Array,
@@ -555,7 +572,7 @@ export const CrankNicolson = (
 The final code block tells Entangled to write the file
 `src/crankNicolson.js` by concatenating all the pieces defined above.
 
-```{.typescript file=src/crankNicolson.ts}
+```{.typescript file=src/crankNicolson.ts filename="Final-assembly"}
 <<concentration-array-and-spacing>>
 <<dimensionless>>
 <<cn-imports>>
