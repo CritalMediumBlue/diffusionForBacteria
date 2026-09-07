@@ -73,7 +73,7 @@ $K_I$ is the **per-cell first-order uptake coefficient**. The uptake rate of a c
 //|code-fold: true
 d3 = require("d3@7")
 
-N = 5 // number of grid points, indices 0..4
+N = 6 // number of grid points, indices 0..5
 
 points = d3.range(N).map(i => ({ i, x: i }))
 
