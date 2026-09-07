@@ -77,6 +77,19 @@ N = 5 // number of grid points, indices 0..4
 
 points = d3.range(N).map(i => ({ i, x: i }))
 
+// Display only a subset to keep the diagram clean for any N
+displayItems = (() => {
+  if (N <= 5) return d3.range(N).map(i => ({ type: "node", i, x: i }));
+  return [
+    { type: "node", i: 0, x: 0 },
+    { type: "node", i: 1, x: 1 },
+    { type: "node", i: 2, x: 2 },
+    { type: "dots" },
+    { type: "node", i: N - 2, x: N - 2 },
+    { type: "node", i: N - 1, x: N - 1 }
+  ];
+})()
+
 schematic = {
   const width = 420, height = 240;
   const marginX = 60;
@@ -126,8 +139,10 @@ schematic = {
         .attr("stroke", "black")
         .attr("stroke-width", 1.5);
 
+    const nodeItems = displayItems.filter(d => d.type === "node");
+
     svg.selectAll(`circle.row-${safeId}`)
-      .data(points)
+      .data(nodeItems)
       .join("circle")
         .attr("class", `row-${safeId}`)
         .attr("cx", d => x(d.x))
@@ -136,13 +151,26 @@ schematic = {
         .attr("fill", "grey");
 
     svg.selectAll(`text.index-${safeId}`)
-      .data(points)
+      .data(nodeItems)
       .join("text")
         .attr("class", `index-${safeId}`)
         .attr("x", d => x(d.x))
         .attr("y", y + 25)
         .attr("text-anchor", "middle")
         .text(d => `u${toSubscript(d.i)}${toSuperscript(label)}`);
+
+    // Add ellipsis between the last early node and first late node
+    const dotsItem = displayItems.find(d => d.type === "dots");
+    if (dotsItem) {
+      const lastEarlyX = x(2);
+      const firstLateX = x(N - 2);
+      svg.append("text")
+        .attr("class", `row-${safeId}`)
+        .attr("x", (lastEarlyX + firstLateX) / 2)
+        .attr("y", y + 25)
+        .attr("text-anchor", "middle")
+        .text("…");
+    }
 
     svg.append("text")
         .attr("x", marginX - 25)
@@ -155,7 +183,8 @@ schematic = {
   drawRow(yN, "n");
   drawRow(yN1, "n+1");
 
-  points.forEach(d => {
+  const nodeItems = displayItems.filter(d => d.type === "node");
+  nodeItems.forEach(d => {
     svg.append("line")
         .attr("x1", x(d.x)).attr("x2", x(d.x))
         .attr("y1", yN + 6).attr("y2", yN1 - 6)
