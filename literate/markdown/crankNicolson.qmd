@@ -81,7 +81,7 @@ points = d3.range(N).map(i => ({ i, x: i }))
 displayItems = (() => {
   if (N <= 5) {
     return d3.range(N).map(i => {
-      const item = { type: "node", i, x: i };
+      const item = { type: "node", i, x: i }; 
       if (i === N - 2) item.subscript = "N" + toSubscriptString("-2");
       else if (i === N - 1) item.subscript = "N" + toSubscriptString("-1");
       return item;
