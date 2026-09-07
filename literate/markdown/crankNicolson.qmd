@@ -100,8 +100,9 @@ schematic = {
     const map = {
       "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄",
       "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉",
-      "+": "₊", "-": "₋", "=": "₌", "(": "₍", ")": "₎"
-    };
+      "+": "₊", "-": "₋", "=": "₌", "(": "₍", ")": "₎",
+      "N": "ₙ"
+    }; 
     return str.split("").map(ch => map[ch] || ch).join("");
   }
 
@@ -110,8 +111,8 @@ schematic = {
     if (N <= 5) {
       return d3.range(N).map(i => {
         const item = { type: "node", i, x: i }; 
-        if (i === N - 2) item.subscript = "N" + toSubscriptString("-2");
-        else if (i === N - 1) item.subscript = "N" + toSubscriptString("-1");
+        if (i === N - 2) item.subscript = toSubscriptString("N-2");
+        else if (i === N - 1) item.subscript = toSubscriptString("N-1");
         return item;
       });
     }
@@ -120,8 +121,8 @@ schematic = {
       { type: "node", i: 1, x: 1 },
       { type: "node", i: 2, x: 2 },
       { type: "dots" },
-      { type: "node", i: N - 2, x: N - 2, subscript: "N" + toSubscriptString("-2") },
-      { type: "node", i: N - 1, x: N - 1, subscript: "N" + toSubscriptString("-1") }
+      { type: "node", i: N - 2, x: N - 2, subscript: toSubscriptString("N-2") },
+      { type: "node", i: N - 1, x: N - 1, subscript: toSubscriptString("N-1") }
     ];
   })()
 
