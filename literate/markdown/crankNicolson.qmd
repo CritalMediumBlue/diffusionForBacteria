@@ -33,11 +33,13 @@ $$ {#eq-diffusion-source-sink}
 
 Here,
 
-- $u(x,t)$ is the extracellular concentration in units of $M/L^d$.
-- $\frac{\partial^2 u}{\partial x^2}$ is the second spatial derivative in units of $M/L^{d+2}$.
-- $D$ is the diffusion coefficient in units of $L^2/T$.
-- $O(x)$ is the source term, representing production of $u$ in units of $M/(L^d\,T)$.
-- $I(x,u,t)$ is the sink term, representing uptake of $u$ in units of $M/(L^d\,T)$.
+| Symbol | Description | Units |
+|---|---|---|
+| $u(x,t)$ | Extracellular concentration | $M/L^d$ |
+| $\frac{\partial^2 u}{\partial x^2}$ | Second spatial derivative | $M/L^{d+2}$ |
+| $D$ | Diffusion coefficient | $L^2/T$ |
+| $O(x)$ | Source term (production of $u$) | $M/(L^d\,T)$ |
+| $I(x,u,t)$ | Sink term (uptake of $u$) | $M/(L^d\,T)$ |
 
 
 ## Point-like sources and sinks
@@ -75,32 +77,29 @@ d3 = require("d3@7")
 
 N = 6 // number of grid points, indices 0..5
 
-points = d3.range(N).map(i => ({ i, x: i }))
+  schematic = {
+    const width = 420, height = 240;
+    const marginX = 60;
 
-schematic = {
-  const width = 420, height = 240;
-  const marginX = 60;
-
-  // Display only a subset to keep the diagram clean for any N
-  const displayItems = (() => {
-    if (N <= 5) {
-      return d3.range(N).map(i => {
-        const item = { type: "node", i, x: i };
-        if (i === N - 2) item.indexLabel = "N-2";
-        else if (i === N - 1) item.indexLabel = "N-1";
-        else item.indexLabel = String(i);
-        return item;
-      });
-    }
-    return [
-      { type: "node", i: 0, x: 0, indexLabel: "0" },
-      { type: "node", i: 1, x: 1, indexLabel: "1" },
-      { type: "node", i: 2, x: 2, indexLabel: "2" },
-      { type: "dots" },
-      { type: "node", i: N - 2, x: N - 2, indexLabel: "N-2" },
-      { type: "node", i: N - 1, x: N - 1, indexLabel: "N-1" }
-    ];
-  })()
+    const displayItems = (() => {
+      if (N <= 5) {
+        return d3.range(N).map(i => {
+          const item = { type: "node", i, x: i };
+          if (i === N - 2) item.indexLabel = "N-2";
+          else if (i === N - 1) item.indexLabel = "N-1";
+          else item.indexLabel = String(i);
+          return item;
+        });
+      }
+      return [
+        { type: "node", i: 0, x: 0, indexLabel: "0" },
+        { type: "node", i: 1, x: 1, indexLabel: "1" },
+        { type: "node", i: 2, x: 2, indexLabel: "2" },
+        { type: "dots" },
+        { type: "node", i: N - 2, x: N - 2, indexLabel: "N-2" },
+        { type: "node", i: N - 1, x: N - 1, indexLabel: "N-1" }
+      ];
+    })();
 
   const nodeItems = displayItems.filter(d => d.type === "node");
 
@@ -126,7 +125,7 @@ schematic = {
       .attr("fill", "gray");
 
   function drawRow(y, label) {
-    const safeId = label.replace(/[^a-zA-Z0-9]/g, ""); // e.g. "n+1" -> "n1"
+    const safeId = label.replace("+", "");
 
     svg.append("line")
         .attr("x1", x(0)).attr("x2", x(N - 1))
@@ -150,32 +149,26 @@ schematic = {
         .attr("font-weight", "bold")
         .text(label);
   }
-
+  drawRow(yN, "n");
   drawRow(yN1, "n+1");
 
-  // Column index labels at the top
-  const topY = yN - 45;
-  nodeItems.forEach(d => {
-    svg.append("text")
-      .attr("x", x(d.x))
-      .attr("y", topY)
-      .attr("text-anchor", "middle")
-      .attr("font-size", "12px")
-      .text(d.indexLabel);
+  displayItems.forEach(d => {
+    if (d.type === "node") {
+      svg.append("text")
+        .attr("x", x(d.x))
+        .attr("y", yN - 22)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "14px")
+        .text(d.indexLabel);
+    } else {
+      svg.append("text")
+        .attr("x", (x(2) + x(N - 2)) / 2)
+        .attr("y", yN - 22)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "12px")
+        .text("…");
+    }
   });
-
-  // Ellipsis at top if needed
-  const dotsItem = displayItems.find(d => d.type === "dots");
-  if (dotsItem) {
-    const lastEarlyX = x(2);
-    const firstLateX = x(N - 2);
-    svg.append("text")
-      .attr("x", (lastEarlyX + firstLateX) / 2)
-      .attr("y", topY)
-      .attr("text-anchor", "middle")
-      .attr("font-size", "12px")
-      .text("…");
-  }
 
   nodeItems.forEach(d => {
     svg.append("line")
@@ -199,7 +192,7 @@ schematic = {
       .text("Δt");
 
   svg.append("line")
-      .attr("x1", x(0)).attr("x2", x(1))
+      .attr("x1", x(0)+12).attr("x2", x(1)-12)
       .attr("y1", yN - 25).attr("y2", yN - 25)
       .attr("stroke", "gray")
       .attr("marker-end", "url(#arrow)")
@@ -245,20 +238,26 @@ dt = deltaT;
 
 which `CrankNicolson` can then use during time stepping.
 
-The array `u` stores $u_i^n$, which approximates $u(x_i, t^n)$
+The arrays `uCurrent` and `uNext` store the concentration at the current and next time steps, respectively. `uCurrent`
+stores $u_i^n$, which approximates $u(x_i, t^n)$, and `uNext` stores $u_i^{n+1}$, which approximates $u(x_i, t^{n+1})$. These arrays are defined at module scope as
+
 
 ```{.typescript #array-u filename="array-u"}
 let uCurrent: Float64Array;
 let uNext: Float64Array;
 ```
 
+And then are initialized in `setCNProperties` using the grid size `N`
+
+
 ```{.typescript #initialized-u filename="initialized-u"}
-uCurrent = new Float64Array(N);
-uNext = new Float64Array(N);
+if (!uCurrent) uCurrent = new Float64Array(N);
+if (!uNext) uNext = new Float64Array(N);
 ```
 
 
-## Discrete Laplacian and source terms
+## Discretization of the Laplacian and Source/Sink Terms
+
 
 The Laplacian is discretized as follows
 
@@ -268,29 +267,34 @@ $$
 \frac{u_{i-1}^n - 2u_i^n + u_{i+1}^n}{\Delta x^2}.
 $$ {#eq-laplacian}
 
-Using the grid index $i_s$ assigned to bacterium $s$, the discrete source and sink terms are
+
+Let $m_i^{(O)}$ and $m_i^{(I)}$ denote the number of secreting and consuming bacteria in grid cell $i$
+
+$$
+m_i^{(O)} = \sum_{s\in B_o} \delta_{i,i_s}, \qquad
+m_i^{(I)} = \sum_{s\in B_i} \delta_{i,i_s},
+$$ {#eq-bacteria-counts}
+Here,  $\delta_{i,i_s}$ is the Kronecker delta, which is dimensionless (unlike the Dirac delta $\delta(x)$ used in the continuous case, which has units of $1/L^d$).
+
+Then, the source and sink terms can be discretized as
 
 $$
 O_i
 =
 \frac{K_O}{\Delta x}
-\sum_{s\in B_o}
-\delta_{i,i_s},
-$$
+m_i^{(O)}
+$$ {#eq-source-discrete}
+
 
 $$
 I_i^n
 =
 \frac{K_I}{\Delta x}
 u_i^n
-\sum_{s\in B_i}
-\delta_{i,i_s}.
-$$
+m_i^{(I)}
+$$ {#eq-sink-discrete}
 
-The factor $1/\Delta x$ represents each point-like bacterium as a source or sink distributed over its assigned grid cell. Consequently, integrating the discrete source or sink over that cell recovers the secretion or uptake associated with that bacterium.
-
-Note that $\delta_{i,i_s}$ is the Kronecker delta, which is dimensionless (unlike the Dirac delta $\delta(x)$ used in the continuous case, which has units of $1/L^d$).
-
+The factor $1/\Delta x$ represents each point-like bacterium as a source or sink distributed over its assigned grid cell. Consequently, integrating the discrete source or sink over that cell recovers the secretion or uptake associated with that bacterium. 
 
 ## Crank--Nicolson discretization
 
@@ -312,7 +316,7 @@ I_i^{n+1} + I_i^n
 \right].
 $${#eq-crank-nicolson}
 
-Inserting the explicit forms of the discrete Laplacian, source, and sink into
+Inserting the explicit forms of the discrete Laplacian, source term and sink term (@eq-laplacian, @eq-source-discrete, @eq-sink-discrete) into
 @eq-crank-nicolson and multiplying by $\Delta t$, we arrive at the linear system
 
 
@@ -332,67 +336,72 @@ u_i^{n+1} - u_i^n
 \\
 &+
 \frac{K_O \Delta t}{\Delta x}
-\sum_{s\in B_o}
-\delta_{i,i_s}
+m_i^{(O)}
 \\
 &-
 \frac{K_I \Delta t}{2\Delta x}
+m_i^{(I)}
 \Bigl[
     u_i^n + u_i^{n+1}
 \Bigr]
-\sum_{s\in B_i}
-\delta_{i,i_s}.
 \end{aligned}
 $$ {#eq-crank-nicolson-expanded}
 
 
-For convenience, define the dimensionless parameter 
+For convenience, define the dimensionless parameter
 
 $$
 \lambda
 =
 \frac{D \Delta t}{2\Delta x^2}
 $$
-which is defined at the  module scope as
+and the arrays $q$ and $\beta$ which contain the source and sink contributions for each grid cell
+
+$$
+q_i=
+\frac{K_O \Delta t}{\Delta x}m_i^{(O)},
+\qquad
+\beta_i
+=
+\frac{K_I \Delta t}{2\Delta x}m_i^{(I)}
+$$
+
+$\lambda$, $q$, and $\beta$ are defined at the  module scope as
 
 ```{.typescript #dimensionless filename="dimensionless"}
-let lambda: number;
+let lambda: number;  
+```
+
+```{.typescript #q-betta filename="q-betta"}
+let q: Float64Array;
+let beta: Float64Array;
 ```
 
 and then initialized in `setCNProperties` as
 
 ```{.typescript #compute-lambda filename="compute-lambda"}
-lambda = (D * deltaT) / (2.0 * deltaX * deltaX);
+lambda = (D * dt) / (2.0 * dx * dx);
 ```
-where `D` is the diffusion coefficient passed as a parameter to `setCNProperties`.
+
+The arrays `q` and `beta` are allocated (conditionally, only when `N` changes) as
+
+```{.typescript #new-q-beta filename="new-q-beta"}
+if (!q) q = new Float64Array(N);
+if (!beta) beta = new Float64Array(N);
+```
+
+and filled on every call to `setCNProperties` (because `sourceCounts` and `sinkCounts` may change between calls):
+
+```{.typescript #compute-q-beta filename="compute-q-beta"}
+for (let i: number = 0; i < N; i++) {
+	q[i] = (K_O * dt) / dx * sourceCounts[i];
+	beta[i] = (K_I * dt) / (2.0 * dx) * sinkCounts[i];
+}
+```
+
+where `D`, `K_O`, and `K_I` are coefficients passed as a parameter to `setCNProperties`; and `sourceCounts` and `sinkCounts` are arrays of length `N` passed as parameters to `setCNProperties` containing $m_i^{(O)}$ and $m_i^{(I)}$, respectively.
 
 
-
-Let's also define the contribution of the source term to the concentration over one time step as
-$$
-q_i
-=
-\Delta t\,O_i
-=
-\frac{K_O \Delta t}{\Delta x}
-\sum_{s\in B_o}
-\delta_{i,i_s}.
-$$
-
-Finally, define the local dimensionless uptake parameter
-
-$$
-\beta_i
-=
-\frac{K_I \Delta t}{2\Delta x}
-\sum_{s\in B_i}
-\delta_{i,i_s}.
-$$
-$$
-\beta_i = \frac{K_I \Delta t}{2\Delta x}
-\sum_{s\in B_i}
-\delta_{i,i_s}
-$$
 
 
 Then @eq-crank-nicolson-expanded can be written as
@@ -415,9 +424,9 @@ u_i^{n+1} - u_i^n
 q_i
 -
 \beta_i
-\Bigl(
+\Bigl[
     u_i^n + u_i^{n+1}
-\Bigr).
+\Bigr].
 \end{aligned}
 $$
 
@@ -434,9 +443,50 @@ $$
 +q_i.
 $$ {#eq-crank-nicolson-tridiagonal}
 
-This equation applies to every grid point $i=0,\ldots,N$.
+This equation applies to every grid point $i=0,\ldots,N-1$, so that for a spatial domain with $N$ grid points, we obtain a system of $N$ linear equations. For a case with Neuman boundary conditions, the system can be written in matrix form as $A u^{n+1} = d$, where $A$ is the $N \times N$ tridiagonal matrix
 
-:::{.callout-note collapse=true title='Example with $N=4$'}
+$$
+A =
+\begin{bmatrix}
+1 + 2\lambda + \beta_0 & -2\lambda & 0 & \cdots & 0 \\
+-\lambda & 1 + 2\lambda + \beta_1 & -\lambda & \ddots & \vdots \\
+0 & -\lambda & \ddots & \ddots & 0 \\
+\vdots & \ddots & \ddots & 1 + 2\lambda + \beta_{N-2} & -\lambda \\
+0 & \cdots & 0 & -2\lambda & 1 + 2\lambda + \beta_{N-1}
+\end{bmatrix},
+$$
+
+$u^{n+1}$ is the unknown vector of concentrations at time level $n+1$,
+
+$$
+u^{n+1} =
+\begin{bmatrix}
+u_0^{n+1} \\
+u_1^{n+1} \\
+\vdots \\
+u_{N-2}^{n+1} \\
+u_{N-1}^{n+1}
+\end{bmatrix},
+$$
+
+and the right-hand side vector $d$ is given by
+
+$$
+d =
+\begin{bmatrix}
+\left(1 - 2\lambda - \beta_0\right) u_0^n + 2\lambda u_1^n + q_0 \\
+\lambda u_0^n + \left(1 - 2\lambda - \beta_1\right) u_1^n + \lambda u_2^n + q_1 \\
+\vdots \\
+\lambda u_{N-3}^n + \left(1 - 2\lambda - \beta_{N-2}\right) u_{N-2}^n + \lambda u_{N-1}^n + q_{N-2} \\
+2\lambda u_{N-2}^n + \left(1 - 2\lambda - \beta_{N-1}\right) u_{N-1}^n + q_{N-1}
+\end{bmatrix}.
+$$
+
+Here, the entries of $A$ and $d$ at the boundaries $i=0$ and $i=N-1$ incorporate Neumann (zero-flux) boundary conditions.
+
+
+
+:::{.callout-note collapse=true title='Example for $N=5$ and Neuman BC'}
 
 If we apply this equation to $5$ grid points ($i=0,1,2,3,4$), we obtain a system of $5$ linear equations for the unknowns $u_i^{n+1}$ 
 
@@ -574,6 +624,71 @@ $$
 
 :::
 
+## Diagonal entries
+The matrix $A$ is built by defining their lower, main, and upper diagonal
+
+```{.typescript #cn-diagonal filename="cn-diagonal"}
+let lowerDiagonal: Float64Array;
+let mainDiagonal: Float64Array;
+let upperDiagonal: Float64Array;
+```
+
+
+which are then initialized in `setCNProperties` as
+
+```{.typescript #new-diagonal filename="new-diagonal"}
+if (!lowerDiagonal) lowerDiagonal = new Float64Array(N);
+if (!mainDiagonal) mainDiagonal = new Float64Array(N);
+if (!upperDiagonal) upperDiagonal = new Float64Array(N);
+```
+
+and then filled with their corresponding parameters
+
+```{.typescript #fill-diagonals filename="fill-diagonals"}
+    for (let i: number = 1; i < N - 1; i++) {
+        lowerDiagonal[i] = -lambda;
+        mainDiagonal[i] = 1.0 + 2.0 * lambda + beta[i];
+        upperDiagonal[i] = -lambda;
+    }
+
+    lowerDiagonal[0] = 0.0;
+    mainDiagonal[0] = 1.0 + 2.0 * lambda + beta[0];
+    upperDiagonal[0] = -2.0 * lambda;
+
+    lowerDiagonal[N - 1] = -2.0 * lambda;
+    mainDiagonal[N - 1] = 1.0 + 2.0 * lambda + beta[N - 1];
+    upperDiagonal[N - 1] = 0.0;
+
+```
+
+
+## Working arrays for the Thomas solver
+
+Each call to the Thomas algorithm requires three scratch arrays:
+`modifiedUpper` holds the forward-eliminated upper diagonal,
+`modifiedRHS` stores the transformed right‑hand side, and
+`solution` receives the final $u_i^{n+1}$. These are workspace arrays;
+unlike the diagonal entries or source/sink coefficients, their contents
+are overwritten every time step. They only need to be reallocated when
+`N` changes, because their length depends on the grid size.
+
+They are declared at module scope as
+
+```{.typescript #cn-working-arrays filename="cn-working-arrays"}
+let modifiedUpper: Float64Array;
+let modifiedRHS: Float64Array;
+let solution: Float64Array;
+```
+
+and reallocated in `setCNProperties` whenever `N` changes:
+
+```{.typescript #new-working-arrays filename="new-working-arrays"}
+if (!modifiedUpper) modifiedUpper = new Float64Array(N);
+if (!modifiedRHS) modifiedRHS = new Float64Array(N);
+if (!solution) solution = new Float64Array(N);
+```
+
+
 ## Imports
 
 We import the Thomas algorithm solver that will be used to solve the
@@ -586,16 +701,9 @@ import { thomasAlgorithm } from "./thomasAlgorithm.js";
 ## Module‑level state
 
 ```{.typescript #cn-variables filename="cn-variables"}
-// Module-level variables for Crank-Nicolson
 <<array-u>>
-let lowerDiagoal: Float64Array;
-let mainDiagnal: Float64Array;
-let upperDiagnal: Float64Array;
-let modifiedUpper: Float64Array;
-let modifiedRHS: Float64Array;
-let solution: Float64Array;
-let beta: Float64Array;
-let scaledSources: Float64Array;
+<<cn-diagonal>>
+<<cn-working-arrays>>
 ```
 
 ## Setting up the Crank‑Nicolson coefficients
@@ -619,51 +727,26 @@ export const setCNProperties = (
     sourceCounts: Float64Array,
     rebuildMatrix: boolean,
 ): void => {
+
+    const NChanged: boolean = N !== length;
     <<definition-inside-cn>>
-    // Calculate coefficients
     <<compute-lambda>>
-    beta = new Float64Array(N);
-    scaledSources = new Float64Array(N);
-    const betaFactor = (K_I * dt) / (2.0 * dx);
-    const sourceFactor = (K_O * dt) / dx;
-    for (let i: number = 0; i < N; i++) {
-        beta[i] = betaFactor * sinkCounts[i];
-        scaledSources[i] = sourceFactor * sourceCounts[i];
+    if (NChanged) {
+        <<new-q-beta>>
+        <<new-diagonal>>
+        <<initialized-u>>
+        <<new-working-arrays>>
     }
+    <<compute-q-beta>>
 
     if (!rebuildMatrix) {
         return;
     }
 
-    // Tridiagonal coefficients for A (left-hand side)
-    lowerDiagoal = new Float64Array(N);
-    mainDiagnal = new Float64Array(N);
-    upperDiagnal = new Float64Array(N);
 
-    // Interior coefficients
-    for (let i: number = 1; i < N - 1; i++) {
-        lowerDiagoal[i] = -lambda;
-        mainDiagnal[i] = 1.0 + 2.0 * lambda + beta[i];
-        upperDiagnal[i] = -lambda;
-    }
+    <<fill-diagonals>>
+    
 
-    // Neumann (reflective) boundaries using centered differences with ghost cells
-    // u_{-1} = u_1 and u_n = u_{n-2} for zero flux
-    // Left boundary i = 0: stencil becomes (1+2λ+β[0])u_0 - 2λu_1
-    lowerDiagoal[0] = 0.0;
-    mainDiagnal[0] = 1.0 + 2.0 * lambda + beta[0];
-    upperDiagnal[0] = -2.0 * lambda;
-
-    // Right boundary i = N-1: stencil becomes -2λu_{n-2} + (1+2λ+β[N-1])u_{n-1}
-    lowerDiagoal[N - 1] = -2.0 * lambda;
-    mainDiagnal[N - 1] = 1.0 + 2.0 * lambda + beta[N - 1];
-    upperDiagnal[N - 1] = 0.0;
-
-    // Work arrays for Thomas algorithm
-    modifiedUpper = new Float64Array(N);
-    modifiedRHS = new Float64Array(N);
-    solution = new Float64Array(N);
-    <<initialized-u>>
 };
 ```
 
@@ -686,19 +769,13 @@ export const CrankNicolson = (
     totalNumberOfIterations: number,
     allowNegativeValues: boolean = false,
 ): void => {
-    // Copy initial condition
     for (let i: number = 0; i < N; i++) {
         uCurrent[i] = concentrationData[i];
     }
 
-    // Time-stepping loop
     for (let step: number = 0; step < totalNumberOfIterations; step++) {
-        // Build right-hand side d = B*u^n + dt*S, with Neumann BC via mirroring.
         const d: Float64Array = modifiedRHS;
 
-        // Left boundary i = 0, using ghost cell u_{-1} = u_1 for zero flux
-        // B coefficients: λ u_{i-1}^n + (1 - 2λ - β[i]) u_i^n + λ u_{i+1}^n
-        // Substituting u_{-1} = u_1: λ u_1 + (1 - 2λ - β[0]) u_0 + λ u_1
         {
             const i: number = 0;
             const u_im1: number = uCurrent[1];       // ghost cell: u_{-1} = u_1
@@ -709,12 +786,11 @@ export const CrankNicolson = (
                 lambda * u_im1 +
                 (1.0 - 2.0 * lambda - beta[i]) * u_i +
                 lambda * u_ip1 +
-                scaledSources[i];
+                q[i];
 
             d[i] = rhsVal;
         }
 
-        // Interior points 1..N-2
         for (let i: number = 1; i < N - 1; i++) {
             const u_im1: number = uCurrent[i - 1];
             const u_i: number   = uCurrent[i];
@@ -724,13 +800,11 @@ export const CrankNicolson = (
                 lambda * u_im1 +
                 (1.0 - 2.0 * lambda - beta[i]) * u_i +
                 lambda * u_ip1 +
-                scaledSources[i];
+                q[i];
 
             d[i] = rhsVal;
         }
 
-        // Right boundary i = N-1, using ghost cell u_n = u_{n-2} for zero flux
-        // Substituting u_n = u_{n-2}: λ u_{n-2} + (1 - 2λ - β[N-1]) u_{n-1} + λ u_{n-2}
         {
             const i: number = N - 1;
             const u_im1: number = uCurrent[N - 2];
@@ -741,16 +815,15 @@ export const CrankNicolson = (
                 lambda * u_im1 +
                 (1.0 - 2.0 * lambda - beta[i]) * u_i +
                 lambda * u_ip1 +
-                scaledSources[i];
+                q[i];
 
             d[i] = rhsVal;
         }
 
-        // Solve A u^{n+1} = d
         thomasAlgorithm(
-            lowerDiagoal,
-            mainDiagnal,
-            upperDiagnal,
+            lowerDiagonal,
+            mainDiagonal,
+            upperDiagonal,
             d,
             N,
             modifiedUpper,
@@ -758,7 +831,6 @@ export const CrankNicolson = (
             solution,
         );
 
-        // Copy solution and optionally check for negativity
         let hasNegative: boolean = false;
         for (let i: number = 0; i < N; i++) {
             uNext[i] = solution[i];
@@ -773,13 +845,11 @@ export const CrankNicolson = (
             );
         }
 
-        // Swap uCurrent and uNext without reallocating
         const tmp: Float64Array = uCurrent;
         uCurrent = uNext;
         uNext = tmp;
     }
 
-    // Copy result back to concentrationData
     for (let i: number = 0; i < N; i++) {
         concentrationData[i] = uCurrent[i];
     }
@@ -794,6 +864,7 @@ The final code block tells Entangled to write the file
 ```{.typescript file=src/crankNicolson.ts filename="Final-assembly"}
 <<concentration-array-and-spacing>>
 <<dimensionless>>
+<<q-betta>>
 <<cn-imports>>
 
 <<cn-variables>>
