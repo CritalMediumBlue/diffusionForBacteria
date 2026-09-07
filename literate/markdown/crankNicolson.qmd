@@ -77,26 +77,6 @@ N = 6 // number of grid points, indices 0..5
 
 points = d3.range(N).map(i => ({ i, x: i }))
 
-// Display only a subset to keep the diagram clean for any N
-displayItems = (() => {
-  if (N <= 5) {
-    return d3.range(N).map(i => {
-      const item = { type: "node", i, x: i }; 
-      if (i === N - 2) item.subscript = "N" + toSubscriptString("-2");
-      else if (i === N - 1) item.subscript = "N" + toSubscriptString("-1");
-      return item;
-    });
-  }
-  return [
-    { type: "node", i: 0, x: 0 },
-    { type: "node", i: 1, x: 1 },
-    { type: "node", i: 2, x: 2 },
-    { type: "dots" },
-    { type: "node", i: N - 2, x: N - 2, subscript: "N" + toSubscriptString("-2") },
-    { type: "node", i: N - 1, x: N - 1, subscript: "N" + toSubscriptString("-1") }
-  ];
-})()
-
 schematic = {
   const width = 420, height = 240;
   const marginX = 60;
@@ -124,6 +104,26 @@ schematic = {
     };
     return str.split("").map(ch => map[ch] || ch).join("");
   }
+
+  // Display only a subset to keep the diagram clean for any N
+  const displayItems = (() => {
+    if (N <= 5) {
+      return d3.range(N).map(i => {
+        const item = { type: "node", i, x: i }; 
+        if (i === N - 2) item.subscript = "N" + toSubscriptString("-2");
+        else if (i === N - 1) item.subscript = "N" + toSubscriptString("-1");
+        return item;
+      });
+    }
+    return [
+      { type: "node", i: 0, x: 0 },
+      { type: "node", i: 1, x: 1 },
+      { type: "node", i: 2, x: 2 },
+      { type: "dots" },
+      { type: "node", i: N - 2, x: N - 2, subscript: "N" + toSubscriptString("-2") },
+      { type: "node", i: N - 1, x: N - 1, subscript: "N" + toSubscriptString("-1") }
+    ];
+  })()
 
   const yN  = 90;  // baseline for time level n
   const yN1 = 190; // baseline for time level n+1
