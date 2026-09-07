@@ -80,6 +80,22 @@ points = d3.range(N).map(i => ({ i, x: i }))
 schematic = {
   const width = 420, height = 240;
   const marginX = 60;
+
+  function toSubscript(num) {
+    const subs = "₀₁₂₃₄₅₆₇₈₉";
+    return String(num).split("").map(ch => subs[ch] || ch).join("");
+  }
+
+  function toSuperscript(str) {
+    const map = {
+      "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
+      "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
+      "+": "⁺", "-": "⁻", "=": "⁼", "(": "⁽", ")": "⁾",
+      "n": "ⁿ"
+    };
+    return str.split("").map(ch => map[ch] || ch).join("");
+  }
+
   const yN  = 90;  // baseline for time level n
   const yN1 = 190; // baseline for time level n+1
 
@@ -126,7 +142,7 @@ schematic = {
         .attr("x", d => x(d.x))
         .attr("y", y + 25)
         .attr("text-anchor", "middle")
-        .text(d => `u_${d.i}^${safeId}`);
+        .text(d => `u${toSubscript(d.i)}${toSuperscript(label)}`);
 
     svg.append("text")
         .attr("x", marginX - 25)
