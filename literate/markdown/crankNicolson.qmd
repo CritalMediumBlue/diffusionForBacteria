@@ -65,7 +65,125 @@ $K_O$ is the **per-cell secretion rate** or **point-source strength**. It specif
 
 $K_I$ is the **per-cell first-order uptake coefficient**. The uptake rate of a consuming bacterium is proportional to the local extracellular concentration. All consuming bacteria are assumed to have the same $K_I$. Unlike $K_O$, the units of $K_I$ depend on the spatial dimension $d$: $K_I$ carries units of $L^d / T$, because the Dirac delta function $\delta(x)$ has units of $1/L^d$ and the sink term $I = K_I\, u\, \delta$ must have units of $M/(L^d\, T)$. In one spatial dimension $(d=1)$, $K_I$ therefore has units of $L/T$.
 
-## Grid and state variables
+## Space--Time Grid
+
+
+
+```{ojs}
+//|code-fold: true
+d3 = require("d3@7")
+
+N = 5 // number of grid points, indices 0..4
+
+points = d3.range(N).map(i => ({ i, x: i }))
+
+schematic = {
+  const width = 420, height = 240;
+  const marginX = 60;
+  const yN  = 90;  // baseline for time level n
+  const yN1 = 190; // baseline for time level n+1
+
+  const x = d3.scaleLinear()
+      .domain([0, N - 1])
+      .range([marginX, width - marginX]);
+
+  const svg = d3.create("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+  svg.append("defs").append("marker")
+      .attr("id", "arrow")
+      .attr("viewBox", "0 0 10 10")
+      .attr("refX", 5).attr("refY", 5)
+      .attr("markerWidth", 6).attr("markerHeight", 6)
+      .attr("orient", "auto-start-reverse")
+    .append("path")
+      .attr("d", "M0,0 L10,5 L0,10 Z")
+      .attr("fill", "gray");
+
+  function drawRow(y, label) {
+    const safeId = label.replace(/[^a-zA-Z0-9]/g, ""); // e.g. "n+1" -> "n1"
+
+    svg.append("line")
+        .attr("x1", x(0)).attr("x2", x(N - 1))
+        .attr("y1", y).attr("y2", y)
+        .attr("stroke", "black")
+        .attr("stroke-width", 1.5);
+
+    svg.selectAll(`circle.row-${safeId}`)
+      .data(points)
+      .join("circle")
+        .attr("class", `row-${safeId}`)
+        .attr("cx", d => x(d.x))
+        .attr("cy", y)
+        .attr("r", 6)
+        .attr("fill", "grey");
+
+    svg.selectAll(`text.index-${safeId}`)
+      .data(points)
+      .join("text")
+        .attr("class", `index-${safeId}`)
+        .attr("x", d => x(d.x))
+        .attr("y", y + 25)
+        .attr("text-anchor", "middle")
+        .text(d => `u_${d.i}^${safeId}`);
+
+    svg.append("text")
+        .attr("x", marginX - 25)
+        .attr("y", y + 4)
+        .attr("text-anchor", "middle")
+        .attr("font-weight", "bold")
+        .text(label);
+  }
+
+  drawRow(yN, "n");
+  drawRow(yN1, "n+1");
+
+  points.forEach(d => {
+    svg.append("line")
+        .attr("x1", x(d.x)).attr("x2", x(d.x))
+        .attr("y1", yN + 6).attr("y2", yN1 - 6)
+        .attr("stroke", "lightgray")
+        .attr("stroke-dasharray", "3,3");
+  });
+
+  svg.append("line")
+      .attr("x1", marginX - 25).attr("x2", marginX - 25)
+      .attr("y1", yN + 15).attr("y2", yN1 - 15)
+      .attr("stroke", "gray")
+      .attr("marker-end", "url(#arrow)")
+      .attr("marker-start", "url(#arrow)");
+
+  svg.append("text")
+      .attr("x", marginX - 45)
+      .attr("y", (yN + yN1) / 2 + 4)
+      .attr("text-anchor", "middle")
+      .text("Δt");
+
+  svg.append("line")
+      .attr("x1", x(0)).attr("x2", x(1))
+      .attr("y1", yN - 25).attr("y2", yN - 25)
+      .attr("stroke", "gray")
+      .attr("marker-end", "url(#arrow)")
+      .attr("marker-start", "url(#arrow)");
+
+  svg.append("text")
+      .attr("x", (x(0) + x(1)) / 2)
+      .attr("y", yN - 32)
+      .attr("text-anchor", "middle")
+      .text("Δx");
+
+  svg.append("text")
+      .attr("x", width / 2)
+      .attr("y", 20)
+      .attr("text-anchor", "middle")
+      .attr("font-weight", "bold")
+      .text("Crank–Nicolson space–time grid");
+
+  return svg.node();
+}
+```
+
 
 The domain is discretized on a uniform grid of `N` ($N$) points with spacing `dx` ($\Delta x$) and time step `dt` ($\Delta t$). These variables are declared at module scope as
 
@@ -92,8 +210,15 @@ which `CrankNicolson` can then use during time stepping.
 The array `u` stores $u_i^n$, which approximates $u(x_i, t^n)$
 
 ```{.typescript #array-u filename="array-u"}
-let u: Float64Array;
+let uCurrent: Float64Array;
+let uNext: Float64Array;
 ```
+
+```{.typescript #initialized-u filename="initialized-u"}
+uCurrent = new Float64Array(N);
+uNext = new Float64Array(N);
+```
+
 
 ## Discrete Laplacian and source terms
 
@@ -383,6 +508,20 @@ A =
 0 & 0 & 0 & -2\lambda & 1 + 2\lambda + \beta_4
 \end{bmatrix},
 $$
+
+$u^{n+1}$ is
+
+$$
+u^{n+1} =
+\begin{bmatrix}
+u_0^{n+1} \\
+u_1^{n+1} \\
+u_2^{n+1} \\
+u_3^{n+1} \\
+u_4^{n+1}
+\end{bmatrix}
+$$
+
 and the right-hand side vector $d$ is
 $$
 d =
@@ -417,7 +556,6 @@ let upperDiagnal: Float64Array;
 let modifiedUpper: Float64Array;
 let modifiedRHS: Float64Array;
 let solution: Float64Array;
-let uNext: Float64Array;
 let beta: Float64Array;
 let scaledSources: Float64Array;
 ```
@@ -487,10 +625,7 @@ export const setCNProperties = (
     modifiedUpper = new Float64Array(N);
     modifiedRHS = new Float64Array(N);
     solution = new Float64Array(N);
-
-    // Solution arrays
-    u = new Float64Array(N);
-    uNext = new Float64Array(N);
+    <<initialized-u>>
 };
 ```
 
@@ -515,7 +650,7 @@ export const CrankNicolson = (
 ): void => {
     // Copy initial condition
     for (let i: number = 0; i < N; i++) {
-        u[i] = concentrationData[i];
+        uCurrent[i] = concentrationData[i];
     }
 
     // Time-stepping loop
@@ -528,9 +663,9 @@ export const CrankNicolson = (
         // Substituting u_{-1} = u_1: λ u_1 + (1 - 2λ - β[0]) u_0 + λ u_1
         {
             const i: number = 0;
-            const u_im1: number = u[1];       // ghost cell: u_{-1} = u_1
-            const u_i: number   = u[0];
-            const u_ip1: number = u[1];
+            const u_im1: number = uCurrent[1];       // ghost cell: u_{-1} = u_1
+            const u_i: number   = uCurrent[0];
+            const u_ip1: number = uCurrent[1];
 
             const rhsVal: number =
                 lambda * u_im1 +
@@ -543,9 +678,9 @@ export const CrankNicolson = (
 
         // Interior points 1..N-2
         for (let i: number = 1; i < N - 1; i++) {
-            const u_im1: number = u[i - 1];
-            const u_i: number   = u[i];
-            const u_ip1: number = u[i + 1];
+            const u_im1: number = uCurrent[i - 1];
+            const u_i: number   = uCurrent[i];
+            const u_ip1: number = uCurrent[i + 1];
 
             const rhsVal: number =
                 lambda * u_im1 +
@@ -560,9 +695,9 @@ export const CrankNicolson = (
         // Substituting u_n = u_{n-2}: λ u_{n-2} + (1 - 2λ - β[N-1]) u_{n-1} + λ u_{n-2}
         {
             const i: number = N - 1;
-            const u_im1: number = u[N - 2];
-            const u_i: number   = u[N - 1];
-            const u_ip1: number = u[N - 2];   // ghost cell: u_n = u_{n-2}
+            const u_im1: number = uCurrent[N - 2];
+            const u_i: number   = uCurrent[N - 1];
+            const u_ip1: number = uCurrent[N - 2];   // ghost cell: u_n = u_{n-2}
 
             const rhsVal: number =
                 lambda * u_im1 +
@@ -600,15 +735,15 @@ export const CrankNicolson = (
             );
         }
 
-        // Swap u and uNext without reallocating
-        const tmp: Float64Array = u;
-        u = uNext;
+        // Swap uCurrent and uNext without reallocating
+        const tmp: Float64Array = uCurrent;
+        uCurrent = uNext;
         uNext = tmp;
     }
 
     // Copy result back to concentrationData
     for (let i: number = 0; i < N; i++) {
-        concentrationData[i] = u[i];
+        concentrationData[i] = uCurrent[i];
     }
 };
 ```
