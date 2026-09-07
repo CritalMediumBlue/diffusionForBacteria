@@ -79,14 +79,21 @@ points = d3.range(N).map(i => ({ i, x: i }))
 
 // Display only a subset to keep the diagram clean for any N
 displayItems = (() => {
-  if (N <= 5) return d3.range(N).map(i => ({ type: "node", i, x: i }));
+  if (N <= 5) {
+    return d3.range(N).map(i => {
+      const item = { type: "node", i, x: i };
+      if (i === N - 2) item.subscript = "N" + toSubscriptString("-2");
+      else if (i === N - 1) item.subscript = "N" + toSubscriptString("-1");
+      return item;
+    });
+  }
   return [
     { type: "node", i: 0, x: 0 },
     { type: "node", i: 1, x: 1 },
     { type: "node", i: 2, x: 2 },
     { type: "dots" },
-    { type: "node", i: N - 2, x: N - 2 },
-    { type: "node", i: N - 1, x: N - 1 }
+    { type: "node", i: N - 2, x: N - 2, subscript: "N" + toSubscriptString("-2") },
+    { type: "node", i: N - 1, x: N - 1, subscript: "N" + toSubscriptString("-1") }
   ];
 })()
 
@@ -105,6 +112,15 @@ schematic = {
       "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
       "+": "⁺", "-": "⁻", "=": "⁼", "(": "⁽", ")": "⁾",
       "n": "ⁿ"
+    };
+    return str.split("").map(ch => map[ch] || ch).join("");
+  }
+
+  function toSubscriptString(str) {
+    const map = {
+      "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄",
+      "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉",
+      "+": "₊", "-": "₋", "=": "₌", "(": "₍", ")": "₎"
     };
     return str.split("").map(ch => map[ch] || ch).join("");
   }
@@ -157,7 +173,7 @@ schematic = {
         .attr("x", d => x(d.x))
         .attr("y", y + 25)
         .attr("text-anchor", "middle")
-        .text(d => `u${toSubscript(d.i)}${toSuperscript(label)}`);
+        .text(d => `u${d.subscript ? d.subscript : toSubscript(d.i)}${toSuperscript(label)}`);
 
     // Add ellipsis between the last early node and first late node
     const dotsItem = displayItems.find(d => d.type === "dots");
