@@ -235,7 +235,7 @@ import { thomasAlgorithm } from "./thomasAlgorithm.js";
         <<alloc-q-beta>>
         <<alloc-diagonals>>
         <<alloc-u>>
-        <<alloc-working-arrays>>
+        <<alloc-thomas-scratch-arrays>>
     }
     <<fill-q-beta>>
 
@@ -857,18 +857,22 @@ and then filled with their corresponding parameters
 ```
 
 
-## Working arrays for the Thomas solver
+## Thomas‑solver scratch arrays
 
-Each call to the Thomas algorithm requires three scratch arrays:
-`modifiedUpper` holds the forward-eliminated upper diagonal,
-`modifiedRHS` stores the transformed right‑hand side, and
-`solution` receives the final $u_i^{n+1}$. These are workspace arrays;
-unlike the diagonal entries or source/sink coefficients, their contents
-are overwritten every time step.
+The Thomas algorithm is a **destructive** solver: during forward elimination it overwrites the upper diagonal and right‑hand side, and during backward substitution it writes the solution into yet another array. If `thomasAlgorithm` allocated these three arrays internally on every call, the time‑stepping loop — which may run hundreds of thousands of iterations — would stress the garbage collector and degrade performance. Instead, the three arrays are pre‑allocated once in `CNSetup` and held at module scope so that the solver runs with **zero per‑step allocation**.
+
+A second benefit is that the original matrix diagonals (`lowerDiagonal`, `mainDiagonal`, `upperDiagonal`) remain untouched. They describe the stationary structure of the tridiagonal system and can be reused across every time step. The scratch arrays isolate the destructive elimination phase from that structural description; only when the source/sink configuration changes (`rebuildMatrix = true`) do the diagonals themselves need recomputation.
+
+| Array | Role | Contents after forward sweep |
+|---|---|---|
+| `modifiedUpper` | Transformed upper diagonal | `c′₀, c′₁, …, c′ₙ₋₂` |
+| `modifiedRHS` | Transformed right‑hand side | `d′₀, d′₁, …, d′ₙ₋₁` |
+| `solution` | Final concentration at time `n+1` | `u₀ⁿ⁺¹, u₁ⁿ⁺¹, …, uₙ₋₁ⁿ⁺¹` |
+
 
 They are declared at `define-module-globals` as
 
-```{.typescript #declare-working-arrays filename="declare-working-arrays"}
+```{.typescript #declare-thomas-scratch-arrays filename="declare-thomas-scratch-arrays"}
 let modifiedUpper: Float64Array;
 let modifiedRHS: Float64Array;
 let solution: Float64Array;
@@ -876,7 +880,7 @@ let solution: Float64Array;
 
 and reallocated in `CNSetup` as
 
-```{.typescript #alloc-working-arrays filename="alloc-working-arrays"}
+```{.typescript #alloc-thomas-scratch-arrays filename="alloc-thomas-scratch-arrays"}
 if (!modifiedUpper) modifiedUpper = new Float64Array(N);
 if (!modifiedRHS) modifiedRHS = new Float64Array(N);
 if (!solution) solution = new Float64Array(N);
@@ -888,7 +892,7 @@ if (!solution) solution = new Float64Array(N);
 ```{.typescript #define-module-vars filename="define-module-vars"}
 
 <<declare-diagonals>>
-<<declare-working-arrays>>
+<<declare-thomas-scratch-arrays>>
 ```
 
 ## Setting up the Crank‑Nicolson coefficients
