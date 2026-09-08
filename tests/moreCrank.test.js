@@ -1,4 +1,4 @@
-import { CrankNicolson, setCNProperties } from "../literate/src/index.js";
+import { CNTimeStepping, CNSetup } from "../literate/src/index.js";
 import { expect, test } from "vitest";
 
 const length = 400;
@@ -17,8 +17,8 @@ test("zero iterations leaves the field unchanged", () => {
 	const K_I = k * deltaX;
 	const K_O = 0;
 
-	setCNProperties(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
-	CrankNicolson(u, 0, true);
+	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CNTimeStepping(u, 0, true);
 
 	for (let i = 0; i < length; i++) {
 		expect(u[i]).toBeCloseTo(u0[i], 12);
@@ -36,8 +36,8 @@ test("uniform field with no source/decay stays constant", () => {
 	const K_I = k * deltaX;
 	const K_O = 0;
 
-	setCNProperties(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
-	CrankNicolson(u, 500, true);
+	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CNTimeStepping(u, 500, true);
 
 	for (let i = 0; i < length; i++) {
 		expect(u[i]).toBeCloseTo(C, 8);
@@ -57,8 +57,8 @@ test("uniform field decays exponentially, independent of D", () => {
 	const K_I = k * deltaX;
 	const K_O = 0;
 
-	setCNProperties(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
-	CrankNicolson(u, iterations, true);
+	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CNTimeStepping(u, iterations, true);
 
 	const expected = C * Math.exp(-k * totalTime);
 	for (let i = 0; i < length; i++) {
@@ -82,8 +82,8 @@ test("uniform field decays exponentially, independent of D", () => {
 		const K_I = k * deltaX;
 		const K_O = 0;
 
-		setCNProperties(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
-		CrankNicolson(u, iterations, true);
+		CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+		CNTimeStepping(u, iterations, true);
 
 		const lambda = k + D * Math.pow((n * Math.PI) / L, 2);
 		const decay = Math.exp(-lambda * totalTime);
@@ -109,8 +109,8 @@ test("total mass is conserved with reflective BC (no source/decay)", () => {
 
 	const massBefore = u.reduce((a, b) => a + b, 0) * deltaX;
 
-	setCNProperties(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
-	CrankNicolson(u, 2000, true);
+	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CNTimeStepping(u, 2000, true);
 
 	const massAfter = u.reduce((a, b) => a + b, 0) * deltaX;
 	expect(massAfter).toBeCloseTo(massBefore, 3);
@@ -131,8 +131,8 @@ test("mass grows linearly with constant source under reflective BC", () => {
 	const K_O = S0 * deltaX;
 	const massBefore = u.reduce((a, b) => a + b, 0) * deltaX;
 
-	setCNProperties(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
-	CrankNicolson(u, iterations, true);
+	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CNTimeStepping(u, iterations, true);
 
 	const massAfter = u.reduce((a, b) => a + b, 0) * deltaX;
 	const expectedGrowth = S0 * (length * deltaX) * totalTime;
@@ -150,8 +150,8 @@ test("converges to uniform steady state S0/k with constant source and decay", ()
 	const K_I = k * deltaX;
 	const K_O = S0 * deltaX;
 
-	setCNProperties(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
-	CrankNicolson(u, 20000, true); // run long enough to reach steady state
+	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CNTimeStepping(u, 20000, true); // run long enough to reach steady state
 
 	const expected = S0 / k;
 	for (let i = 0; i < length; i++) {
@@ -170,8 +170,8 @@ test("symmetric initial condition remains symmetric in time", () => {
 	const K_I = k * deltaX;
 	const K_O = 0;
 
-	setCNProperties(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
-	CrankNicolson(u, 500, true);
+	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CNTimeStepping(u, 500, true);
 
 	for (let i = 0; i < length; i++) {
 		expect(u[i]).toBeCloseTo(u[length - 1 - i], 6);

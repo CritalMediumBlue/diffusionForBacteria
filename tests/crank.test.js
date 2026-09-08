@@ -1,8 +1,8 @@
 import {
 	ADI,
 	setADIProperties,
-	CrankNicolson,
-	setCNProperties,
+	CNTimeStepping,
+	CNSetup,
 	updateSinksAndSources,
 } from "../literate/src/index.js";
 import { expect, test } from "vitest";
@@ -52,8 +52,8 @@ testCases.forEach(({ diffusionCoefficient, decayRate, deltaX, totalTime }) => {
 
 		ADI(numericalSolutionUsingADI, totalIterations, true);
 
-		setCNProperties(length, diffusionCoefficient, deltaX, deltaT, K_I, K_O, sinkCounts, sourceCounts1D, true);
-		CrankNicolson(numericalSolutionUsingCrankNicolson, totalIterations, true);
+		CNSetup(length, diffusionCoefficient, deltaX, deltaT, K_I, K_O, sinkCounts, sourceCounts1D, true);
+		CNTimeStepping(numericalSolutionUsingCrankNicolson, totalIterations, true);
 
 		for (let i = 0; i < length; i++) {
 			const valueADI = numericalSolutionUsingADI[i + length]; // middle row
@@ -79,8 +79,8 @@ test("Crank-Nicolson matches analytical decay of cos mode", () => {
 	const K_I = k * deltaX;
 	const K_O = 0;
 
-	setCNProperties(length, D, deltaX, deltaT, K_I, K_O, sinkCounts, sourceCounts, true);
-	CrankNicolson(u, totalIterations, true);
+	CNSetup(length, D, deltaX, deltaT, K_I, K_O, sinkCounts, sourceCounts, true);
+	CNTimeStepping(u, totalIterations, true);
 
 	for (let i = 0; i < length; i++) {
 		const exact =

@@ -2,7 +2,7 @@
 
 ## Biological problem
 
-We consider a substance with concentration $u(x,t)$ that diffuses in one spatial dimension with a constant diffusion coefficient $D$. Bacteria living in this 1 dimensional space may secrete the substance into the environment or remove it through uptake.
+We consider a substance with concentration $u(x,t)$ that diffuses in one spatial dimension with a constant diffusion coefficient $D$. Point-like agents that act as sources and sinks in this one dimensional space, they may secrete the substance into the environment or remove it through uptake. These point-like agents might represent individual bacterium or discrete protein clusters positioned at specific locations along a filament or channel.
 
 :::{.callout-note title="Dimensions and units"}
 
@@ -44,9 +44,9 @@ Here,
 
 ## Point-like sources and sinks
 
-Let $B_o$ denote the set of secreting bacteria and $B_i$ the set of consuming bacteria. Let $x_s$ be the position of bacterium $s$, and let $i_s$ be the grid index of the cell to which that bacterium is assigned. For example, $i_s$ may be chosen as the index of the nearest grid cell.
+Let $B_o$ denote the set of secreting agents and $B_i$ the set of consuming agents. Let $x_s$ be the position of agent $s$.
 
-The bacteria are represented as point-like sources and sinks using Dirac delta functions
+The agents are represented as point-like sources and sinks using Dirac delta functions
 
 $$
 O(x)
@@ -63,9 +63,192 @@ K_I\,u(x,t)
 \sum_{s\in B_i}
 \delta(x-x_s).
 $$
-$K_O$ is the **per-cell secretion rate** or **point-source strength**. It specifies the amount of substance secreted by one bacterium per unit time. All secreting bacteria are assumed to have the same $K_O$, with units of $M/T$. This is an intrinsic bacterial property independent of the geometry of space.
+$K_O$ is the **per-agent secretion rate** or **point-source strength**. It specifies the amount of substance secreted by one agent per unit time. All secreting agents are assumed to have the same $K_O$, with units of $M/T$. This is an intrinsic bacterial property independent of the geometry of space.
 
-$K_I$ is the **per-cell first-order uptake coefficient**. The uptake rate of a consuming bacterium is proportional to the local extracellular concentration. All consuming bacteria are assumed to have the same $K_I$. Unlike $K_O$, the units of $K_I$ depend on the spatial dimension $d$: $K_I$ carries units of $L^d / T$, because the Dirac delta function $\delta(x)$ has units of $1/L^d$ and the sink term $I = K_I\, u\, \delta$ must have units of $M/(L^d\, T)$. In one spatial dimension $(d=1)$, $K_I$ therefore has units of $L/T$.
+$K_I$ is the **per-agent first-order uptake coefficient**. The uptake rate of a consuming agent is proportional to the local extracellular concentration. All consuming agents are assumed to have the same $K_I$. Unlike $K_O$, the units of $K_I$ depend on the spatial dimension $d$: $K_I$ carries units of $L^d / T$, because the Dirac delta function $\delta(x)$ has units of $1/L^d$ and the sink term $I = K_I\, u\, \delta$ must have units of $M/(L^d\, T)$. In one spatial dimension $(d=1)$, $K_I$ therefore has units of $L/T$.
+
+
+
+## Module structure
+
+The typescript file that implements this numerical method is organized into three main sections: ``define-module-globals``, ``define-cn-setup``, and ``define-cn-time-stepping``.
+
+
+```{.typescript file=src/crankNicolson.ts filename="src/crankNicolson.ts"}
+
+<<define-module-globals>>
+
+<<define-cn-setup>>
+
+<<define-cn-time-stepping>>
+
+```
+
+In `define-module-globals` we will define the arrays and variables that are shared across the whole module. In `define-cn-setup` we will initialize the computational grid, precompute coefficients, and allocate the arrays needed for solving the linear system at each time step.
+
+
+```{.typescript #define-cn-setup filename="define-cn-setup"}
+
+export const CNSetup = (
+    length: number,
+    D: number,
+    deltaX: number,
+    deltaT: number,
+    K_I: number,
+    K_O: number,
+    sinkCounts: Float64Array,
+    sourceCounts: Float64Array,
+    rebuildMatrix: boolean,
+): void => {
+
+
+
+	<<define-setup-logic>>
+
+
+};
+```
+
+
+And in `define-cn-time-stepping` we will implement the time-stepping loop that advances the solution by solving the tridiagonal system at each step.
+
+```{.typescript #define-cn-time-stepping filename="define-cn-time-stepping"}
+
+export const CNTimeStepping = (
+    concentrationData: Float64Array,
+    totalNumberOfIterations: number,
+    allowNegativeValues: boolean = false,
+): void => {
+
+
+	<<define-time-stepping-logic>>
+
+
+};
+```
+
+```{.typescript #define-time-stepping-logic filename="define-time-stepping-logic"}
+    for (let i: number = 0; i < N; i++) {
+        uCurrent[i] = concentrationData[i];
+    }
+
+    for (let step: number = 0; step < totalNumberOfIterations; step++) {
+        const d: Float64Array = modifiedRHS;
+
+        {
+            const i: number = 0;
+            const u_im1: number = uCurrent[1];       // ghost cell: u_{-1} = u_1
+            const u_i: number   = uCurrent[0];
+            const u_ip1: number = uCurrent[1];
+
+            const rhsVal: number =
+                lambda * u_im1 +
+                (1.0 - 2.0 * lambda - beta[i]) * u_i +
+                lambda * u_ip1 +
+                q[i];
+
+            d[i] = rhsVal;
+        }
+
+        for (let i: number = 1; i < N - 1; i++) {
+            const u_im1: number = uCurrent[i - 1];
+            const u_i: number   = uCurrent[i];
+            const u_ip1: number = uCurrent[i + 1];
+
+            const rhsVal: number =
+                lambda * u_im1 +
+                (1.0 - 2.0 * lambda - beta[i]) * u_i +
+                lambda * u_ip1 +
+                q[i];
+
+            d[i] = rhsVal;
+        }
+
+        {
+            const i: number = N - 1;
+            const u_im1: number = uCurrent[N - 2];
+            const u_i: number   = uCurrent[N - 1];
+            const u_ip1: number = uCurrent[N - 2];   // ghost cell: u_n = u_{n-2}
+
+            const rhsVal: number =
+                lambda * u_im1 +
+                (1.0 - 2.0 * lambda - beta[i]) * u_i +
+                lambda * u_ip1 +
+                q[i];
+
+            d[i] = rhsVal;
+        }
+
+        thomasAlgorithm(
+            lowerDiagonal,
+            mainDiagonal,
+            upperDiagonal,
+            d,
+            N,
+            modifiedUpper,
+            modifiedRHS,
+            solution,
+        );
+
+        let hasNegative: boolean = false;
+        for (let i: number = 0; i < N; i++) {
+            uNext[i] = solution[i];
+            if (!allowNegativeValues && uNext[i] < 0) {
+                hasNegative = true;
+            }
+        }
+
+        if (hasNegative && !allowNegativeValues) {
+            throw new Error(
+                "Negative concentrations encountered in CNTimeStepping step " + step,
+            );
+        }
+
+        const tmp: Float64Array = uCurrent;
+        uCurrent = uNext;
+        uNext = tmp;
+    }
+
+    for (let i: number = 0; i < N; i++) {
+        concentrationData[i] = uCurrent[i];
+    }
+
+
+```
+
+
+```{.typescript #define-module-globals filename="define-module-globals"}
+
+import { thomasAlgorithm } from "./thomasAlgorithm.js";
+<<declare-grid-params-u>>
+<<declare-lambda-q-beta>>
+<<define-module-vars>>
+```
+
+
+
+```{.typescript #define-setup-logic filename=define-setup-logic}
+    const NChanged: boolean = N !== length;
+    <<assign-grid-params>>
+    <<compute-lambda>>
+    if (NChanged) {
+        <<alloc-q-beta>>
+        <<alloc-diagonals>>
+        <<alloc-u>>
+        <<alloc-working-arrays>>
+    }
+    <<fill-q-beta>>
+
+    if (!rebuildMatrix) {
+        return;
+    }
+
+
+    <<fill-diagonals>>
+    
+
+```
+
 
 ## Space--Time Grid
 
@@ -211,49 +394,57 @@ N = 6 // number of grid points, indices 0..5
       .attr("font-weight", "bold")
       .text("Crank–Nicolson space–time grid");
 
-  return svg.node();
+  const container = document.createElement("div");
+  container.style.textAlign = "center";
+  container.appendChild(svg.node());
+  return container;
 }
 ```
 
 
-The domain is discretized on a uniform grid of `N` ($N$) points with spacing `dx` ($\Delta x$) and time step `dt` ($\Delta t$). These variables are declared at module scope as
+The domain is discretized on a uniform grid of `N` ($N$) points with spacing `dx` ($\Delta x$) and time step `dt` ($\Delta t$). The arrays `uCurrent` and `uNext` store the concentration at the current and next time steps, respectively. `uCurrent`
+stores $u_i^n$, which approximates $u(x_i, t^n)$, and `uNext` stores $u_i^{n+1}$, which approximates $u(x_i, t^{n+1})$. These variables and arrays are defined at module scope as
 
-```{.typescript #concentration-array-and-spacing filename="concentration-array-and-spacing"}
+### Variable declaration
+
+ These variables are declared in `define-module-globals`
+
+```{.typescript #declare-grid-params-u filename="declare-grid-params-u"}
 let N: number;
 let dx: number;
 let dt: number;
-```
-
-and their values are initialized
-in `setCNProperties` from its parameters `length`, `deltaX`, and `deltaT`)
-
-
-```{.typescript #definition-inside-cn filename="definition-inside-cn" }
-N = length;
-dx = deltaX;
-dt = deltaT;
-```
-
-
-
-which `CrankNicolson` can then use during time stepping.
-
-The arrays `uCurrent` and `uNext` store the concentration at the current and next time steps, respectively. `uCurrent`
-stores $u_i^n$, which approximates $u(x_i, t^n)$, and `uNext` stores $u_i^{n+1}$, which approximates $u(x_i, t^{n+1})$. These arrays are defined at module scope as
-
-
-```{.typescript #array-u filename="array-u"}
 let uCurrent: Float64Array;
 let uNext: Float64Array;
 ```
 
-And then are initialized in `setCNProperties` using the grid size `N`
+### Variable initialization 
+
+The parameters values are initialized
+in `CNSetup` from its parameters `length`, `deltaX`, and `deltaT`)
 
 
-```{.typescript #initialized-u filename="initialized-u"}
+```{.typescript #assign-grid-params filename="assign-grid-params" }
+N = length;
+dx = deltaX;
+dt = deltaT;
+```
+and the arrays are allocated in `CNSetup` using the grid size `N`.
+
+```{.typescript #alloc-u filename="alloc-u"}
 if (!uCurrent) uCurrent = new Float64Array(N);
 if (!uNext) uNext = new Float64Array(N);
 ```
+
+
+
+which `CNTimeStepping` can then use during time stepping.
+
+
+
+
+
+
+
 
 
 ## Discretization of the Laplacian and Source/Sink Terms
@@ -268,12 +459,12 @@ $$
 $$ {#eq-laplacian}
 
 
-Let $m_i^{(O)}$ and $m_i^{(I)}$ denote the number of secreting and consuming bacteria in grid cell $i$
+Let $m_i^{(O)}$ and $m_i^{(I)}$ denote the number of secreting and consuming agents in grid cell $i$, and let $i_s$ be the grid index of the cell to which agent $s$ is assigned (for example, the nearest grid cell). Then
 
 $$
 m_i^{(O)} = \sum_{s\in B_o} \delta_{i,i_s}, \qquad
 m_i^{(I)} = \sum_{s\in B_i} \delta_{i,i_s},
-$$ {#eq-bacteria-counts}
+$$ {#eq-agents-counts}
 Here,  $\delta_{i,i_s}$ is the Kronecker delta, which is dimensionless (unlike the Dirac delta $\delta(x)$ used in the continuous case, which has units of $1/L^d$).
 
 Then, the source and sink terms can be discretized as
@@ -294,9 +485,9 @@ u_i^n
 m_i^{(I)}
 $$ {#eq-sink-discrete}
 
-The factor $1/\Delta x$ represents each point-like bacterium as a source or sink distributed over its assigned grid cell. Consequently, integrating the discrete source or sink over that cell recovers the secretion or uptake associated with that bacterium. 
+The factor $1/\Delta x$ represents each point-like agent as a source or sink distributed over its assigned grid cell. Consequently, integrating the discrete source or sink over that cell recovers the secretion or uptake associated with that agent. 
 
-## Crank--Nicolson discretization
+## Crank--Nicolson scheme 
 
 Using the Crank--Nicolson method, the diffusion and uptake terms are averaged between time levels $n$ and $n+1$. Since the secretion term is assumed constant in time, it is included directly:
 
@@ -348,16 +539,13 @@ m_i^{(I)}
 $$ {#eq-crank-nicolson-expanded}
 
 
-For convenience, define the dimensionless parameter
+For convenience, define the parameters $\lambda$ , $q_i$, and $\beta_i$:
 
 $$
 \lambda
 =
 \frac{D \Delta t}{2\Delta x^2}
-$$
-and the arrays $q$ and $\beta$ which contain the source and sink contributions for each grid cell
-
-$$
+\qquad
 q_i=
 \frac{K_O \Delta t}{\Delta x}m_i^{(O)},
 \qquad
@@ -366,43 +554,44 @@ q_i=
 \frac{K_I \Delta t}{2\Delta x}m_i^{(I)}
 $$
 
-$\lambda$, $q$, and $\beta$ are defined at the  module scope as
+### Parameter declaration
 
-```{.typescript #dimensionless filename="dimensionless"}
+$\lambda$, $q$, and $\beta$ are declared in `define-module-globals`
+
+```{.typescript #declare-lambda-q-beta filename="declare-lambda-q-beta"}
 let lambda: number;  
-```
-
-```{.typescript #q-betta filename="q-betta"}
 let q: Float64Array;
 let beta: Float64Array;
 ```
 
-and then initialized in `setCNProperties` as
+### Parameter initialization
+
+Lambda is computed in `CNSetup` as
 
 ```{.typescript #compute-lambda filename="compute-lambda"}
 lambda = (D * dt) / (2.0 * dx * dx);
 ```
 
-The arrays `q` and `beta` are allocated (conditionally, only when `N` changes) as
+and the arrays `q` and `beta` are allocated with size `N` in `CNSetup` as well 
 
-```{.typescript #new-q-beta filename="new-q-beta"}
+```{.typescript #alloc-q-beta filename="alloc-q-beta"}
 if (!q) q = new Float64Array(N);
 if (!beta) beta = new Float64Array(N);
 ```
 
-and filled on every call to `setCNProperties` (because `sourceCounts` and `sinkCounts` may change between calls):
+and filled using the formulas for $q_i$ and $\beta_i$ derived above.
 
-```{.typescript #compute-q-beta filename="compute-q-beta"}
+```{.typescript #fill-q-beta filename="fill-q-beta"}
 for (let i: number = 0; i < N; i++) {
 	q[i] = (K_O * dt) / dx * sourceCounts[i];
 	beta[i] = (K_I * dt) / (2.0 * dx) * sinkCounts[i];
 }
 ```
 
-where `D`, `K_O`, and `K_I` are coefficients passed as a parameter to `setCNProperties`; and `sourceCounts` and `sinkCounts` are arrays of length `N` passed as parameters to `setCNProperties` containing $m_i^{(O)}$ and $m_i^{(I)}$, respectively.
+where `D`, `K_O`, and `K_I` are coefficients passed as a parameter to `CNSetup`; and `sourceCounts` and `sinkCounts` are arrays of length `N` passed as parameters to `CNSetup` containing $m_i^{(O)}$ and $m_i^{(I)}$, respectively.
 
 
-
+## Tridiagonal system
 
 Then @eq-crank-nicolson-expanded can be written as
 
@@ -624,19 +813,25 @@ $$
 
 :::
 
-## Diagonal entries
-The matrix $A$ is built by defining their lower, main, and upper diagonal
 
-```{.typescript #cn-diagonal filename="cn-diagonal"}
+The solution vector $u^{n+1}$ is solved from the system $A u^{n+1} = d$ using the Thomas algorithm, which implementation lives in a separate module. 
+
+
+### Diagonals declaration
+
+The matrix $A$ is built from the lower, main, and upper diagonals, which are declared in `define-module-globals` as
+
+```{.typescript #declare-diagonals filename="declare-diagonals"}
 let lowerDiagonal: Float64Array;
 let mainDiagonal: Float64Array;
 let upperDiagonal: Float64Array;
 ```
 
+### Diagonals initialization
 
-which are then initialized in `setCNProperties` as
+The diagonals are then initialized in `CNSetup` as
 
-```{.typescript #new-diagonal filename="new-diagonal"}
+```{.typescript #alloc-diagonals filename="alloc-diagonals"}
 if (!lowerDiagonal) lowerDiagonal = new Float64Array(N);
 if (!mainDiagonal) mainDiagonal = new Float64Array(N);
 if (!upperDiagonal) upperDiagonal = new Float64Array(N);
@@ -669,90 +864,46 @@ Each call to the Thomas algorithm requires three scratch arrays:
 `modifiedRHS` stores the transformed right‑hand side, and
 `solution` receives the final $u_i^{n+1}$. These are workspace arrays;
 unlike the diagonal entries or source/sink coefficients, their contents
-are overwritten every time step. They only need to be reallocated when
-`N` changes, because their length depends on the grid size.
+are overwritten every time step.
 
-They are declared at module scope as
+They are declared at `define-module-globals` as
 
-```{.typescript #cn-working-arrays filename="cn-working-arrays"}
+```{.typescript #declare-working-arrays filename="declare-working-arrays"}
 let modifiedUpper: Float64Array;
 let modifiedRHS: Float64Array;
 let solution: Float64Array;
 ```
 
-and reallocated in `setCNProperties` whenever `N` changes:
+and reallocated in `CNSetup` as
 
-```{.typescript #new-working-arrays filename="new-working-arrays"}
+```{.typescript #alloc-working-arrays filename="alloc-working-arrays"}
 if (!modifiedUpper) modifiedUpper = new Float64Array(N);
 if (!modifiedRHS) modifiedRHS = new Float64Array(N);
 if (!solution) solution = new Float64Array(N);
 ```
 
 
-## Imports
-
-We import the Thomas algorithm solver that will be used to solve the
-tridiagonal system at each time step:
-
-```{.typescript #cn-imports filename="cn-imports"}
-import { thomasAlgorithm } from "./thomasAlgorithm.js";
-```
-
 ## Module‑level state
 
-```{.typescript #cn-variables filename="cn-variables"}
-<<array-u>>
-<<cn-diagonal>>
-<<cn-working-arrays>>
+```{.typescript #define-module-vars filename="define-module-vars"}
+
+<<declare-diagonals>>
+<<declare-working-arrays>>
 ```
 
 ## Setting up the Crank‑Nicolson coefficients
 
-`setCNProperties` must be called once before any simulation. It stores
+`CNSetup` must be called once before any simulation. It stores
 the grid length and computes the coefficients that define the
 tridiagonal system. Neumann (zero‑flux) boundary conditions are
 implemented by adjusting the first and last rows of the matrix using
 ghost‑cell mirroring.
 
-```{.typescript #cn-set-properties filename="cn-set-properties"}
 
-export const setCNProperties = (
-    length: number,
-    D: number,
-    deltaX: number,
-    deltaT: number,
-    K_I: number,
-    K_O: number,
-    sinkCounts: Float64Array,
-    sourceCounts: Float64Array,
-    rebuildMatrix: boolean,
-): void => {
-
-    const NChanged: boolean = N !== length;
-    <<definition-inside-cn>>
-    <<compute-lambda>>
-    if (NChanged) {
-        <<new-q-beta>>
-        <<new-diagonal>>
-        <<initialized-u>>
-        <<new-working-arrays>>
-    }
-    <<compute-q-beta>>
-
-    if (!rebuildMatrix) {
-        return;
-    }
-
-
-    <<fill-diagonals>>
-    
-
-};
-```
 
 ## The time‑stepping loop
 
-The main `CrankNicolson` function advances the concentration field by
+The main `CNTimeStepping` function advances the concentration field by
 `totalNumberOfIterations` time steps. At each step it builds the
 right‑hand side vector using the explicit part of the scheme (including
 source terms and Neumann boundary conditions via ghost‑cell mirroring),
@@ -762,114 +913,10 @@ the solution arrays for the next iteration.
 If a negative concentration appears and `allowNegativeValues` is
 `false`, the function throws an error.
 
-```{.typescript #cn-main-function filename="cn-main-function"}
-
-export const CrankNicolson = (
-    concentrationData: Float64Array,
-    totalNumberOfIterations: number,
-    allowNegativeValues: boolean = false,
-): void => {
-    for (let i: number = 0; i < N; i++) {
-        uCurrent[i] = concentrationData[i];
-    }
-
-    for (let step: number = 0; step < totalNumberOfIterations; step++) {
-        const d: Float64Array = modifiedRHS;
-
-        {
-            const i: number = 0;
-            const u_im1: number = uCurrent[1];       // ghost cell: u_{-1} = u_1
-            const u_i: number   = uCurrent[0];
-            const u_ip1: number = uCurrent[1];
-
-            const rhsVal: number =
-                lambda * u_im1 +
-                (1.0 - 2.0 * lambda - beta[i]) * u_i +
-                lambda * u_ip1 +
-                q[i];
-
-            d[i] = rhsVal;
-        }
-
-        for (let i: number = 1; i < N - 1; i++) {
-            const u_im1: number = uCurrent[i - 1];
-            const u_i: number   = uCurrent[i];
-            const u_ip1: number = uCurrent[i + 1];
-
-            const rhsVal: number =
-                lambda * u_im1 +
-                (1.0 - 2.0 * lambda - beta[i]) * u_i +
-                lambda * u_ip1 +
-                q[i];
-
-            d[i] = rhsVal;
-        }
-
-        {
-            const i: number = N - 1;
-            const u_im1: number = uCurrent[N - 2];
-            const u_i: number   = uCurrent[N - 1];
-            const u_ip1: number = uCurrent[N - 2];   // ghost cell: u_n = u_{n-2}
-
-            const rhsVal: number =
-                lambda * u_im1 +
-                (1.0 - 2.0 * lambda - beta[i]) * u_i +
-                lambda * u_ip1 +
-                q[i];
-
-            d[i] = rhsVal;
-        }
-
-        thomasAlgorithm(
-            lowerDiagonal,
-            mainDiagonal,
-            upperDiagonal,
-            d,
-            N,
-            modifiedUpper,
-            modifiedRHS,
-            solution,
-        );
-
-        let hasNegative: boolean = false;
-        for (let i: number = 0; i < N; i++) {
-            uNext[i] = solution[i];
-            if (!allowNegativeValues && uNext[i] < 0) {
-                hasNegative = true;
-            }
-        }
-
-        if (hasNegative && !allowNegativeValues) {
-            throw new Error(
-                "Negative concentrations encountered in CrankNicolson step " + step,
-            );
-        }
-
-        const tmp: Float64Array = uCurrent;
-        uCurrent = uNext;
-        uNext = tmp;
-    }
-
-    for (let i: number = 0; i < N; i++) {
-        concentrationData[i] = uCurrent[i];
-    }
-};
-```
 
 ## Assembling the module
 
 The final code block tells Entangled to write the file
 `src/crankNicolson.js` by concatenating all the pieces defined above.
 
-```{.typescript file=src/crankNicolson.ts filename="Final-assembly"}
-<<concentration-array-and-spacing>>
-<<dimensionless>>
-<<q-betta>>
-<<cn-imports>>
 
-<<cn-variables>>
-
-<<cn-set-properties>>
-
-<<cn-main-function>>
-```
