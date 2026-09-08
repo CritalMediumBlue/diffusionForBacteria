@@ -53,7 +53,7 @@ testCases.forEach(({ diffusionCoefficient, decayRate, deltaX, totalTime }) => {
 		ADI(numericalSolutionUsingADI, totalIterations, true);
 
 		CNSetup(length, diffusionCoefficient, deltaX, deltaT, K_I, K_O, sinkCounts, sourceCounts1D, true);
-		CNTimeStepping(numericalSolutionUsingCrankNicolson, totalIterations, true);
+		CNTimeStepping(numericalSolutionUsingCrankNicolson, totalIterations);
 
 		for (let i = 0; i < length; i++) {
 			const valueADI = numericalSolutionUsingADI[i + length]; // middle row
@@ -80,7 +80,7 @@ test("Crank-Nicolson matches analytical decay of cos mode", () => {
 	const K_O = 0;
 
 	CNSetup(length, D, deltaX, deltaT, K_I, K_O, sinkCounts, sourceCounts, true);
-	CNTimeStepping(u, totalIterations, true);
+	CNTimeStepping(u, totalIterations);
 
 	for (let i = 0; i < length; i++) {
 		const exact =

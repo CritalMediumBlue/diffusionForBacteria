@@ -68,7 +68,6 @@ describe("Crank-Nicolson vs ADI Comparison", () => {
 		CNTimeStepping(
 			numericalSolutionCrank,
 			totalIterations,
-			true
 		);
 		updateSinksAndSources(sinks, sources);
 		ADI(numericalSolutionADI, totalIterations, true);
@@ -262,7 +261,7 @@ describe("CrankNicolson vs Analitic Steady-State Solution", () => {
 
 		while (!steadyStateReached) {
 			const previousConcentration = numericalSolutionCN.slice();
-			CNTimeStepping(numericalSolutionCN, 200, true);
+			CNTimeStepping(numericalSolutionCN, 200);
 			steadyStateReached = checkForSteadyState(
 				previousConcentration,
 				numericalSolutionCN,

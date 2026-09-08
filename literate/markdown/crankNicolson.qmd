@@ -71,12 +71,12 @@ $K_I$ is the **per-agent first-order uptake coefficient**. The uptake rate of a 
 
 ## Module structure
 
-The typescript file that implements this numerical method is organized into three main sections: ``define-module-globals``, ``define-cn-setup``, and ``define-cn-time-stepping``.
+The typescript file that implements this numerical method is organized into three main sections: ``define-global-variables``, ``define-cn-setup``, and ``define-cn-time-stepping``.
 
 
 ```{.typescript file=src/crankNicolson.ts filename="src/crankNicolson.ts"}
 
-<<define-module-globals>>
+<<define-global-variables>>
 
 <<define-cn-setup>>
 
@@ -84,7 +84,7 @@ The typescript file that implements this numerical method is organized into thre
 
 ```
 
-In `define-module-globals` we will define the arrays and variables that are shared across the whole module. In `define-cn-setup` we will initialize the computational grid, precompute coefficients, and allocate the arrays needed for solving the linear system at each time step.
+In `define-global-variables` we will define the arrays and variables that are shared across the whole module. In `define-cn-setup` we will initialize the computational grid, precompute coefficients, and allocate the arrays needed for solving the linear system at each time step.
 
 
 ```{.typescript #define-cn-setup filename="define-cn-setup"}
@@ -98,7 +98,6 @@ export const CNSetup = (
     K_O: number,
     sinkCounts: Float64Array,
     sourceCounts: Float64Array,
-    rebuildMatrix: boolean,
 ): void => {
 
 
@@ -117,7 +116,6 @@ And in `define-cn-time-stepping` we will implement the time-stepping loop that a
 export const CNTimeStepping = (
     concentrationData: Float64Array,
     totalNumberOfIterations: number,
-    allowNegativeValues: boolean = false,
 ): void => {
 
 
@@ -127,127 +125,9 @@ export const CNTimeStepping = (
 };
 ```
 
-```{.typescript #define-time-stepping-logic filename="define-time-stepping-logic"}
-    for (let i: number = 0; i < N; i++) {
-        uCurrent[i] = concentrationData[i];
-    }
-
-    for (let step: number = 0; step < totalNumberOfIterations; step++) {
-        const d: Float64Array = modifiedRHS;
-
-        {
-            const i: number = 0;
-            const u_im1: number = uCurrent[1];       // ghost cell: u_{-1} = u_1
-            const u_i: number   = uCurrent[0];
-            const u_ip1: number = uCurrent[1];
-
-            const rhsVal: number =
-                lambda * u_im1 +
-                (1.0 - 2.0 * lambda - beta[i]) * u_i +
-                lambda * u_ip1 +
-                q[i];
-
-            d[i] = rhsVal;
-        }
-
-        for (let i: number = 1; i < N - 1; i++) {
-            const u_im1: number = uCurrent[i - 1];
-            const u_i: number   = uCurrent[i];
-            const u_ip1: number = uCurrent[i + 1];
-
-            const rhsVal: number =
-                lambda * u_im1 +
-                (1.0 - 2.0 * lambda - beta[i]) * u_i +
-                lambda * u_ip1 +
-                q[i];
-
-            d[i] = rhsVal;
-        }
-
-        {
-            const i: number = N - 1;
-            const u_im1: number = uCurrent[N - 2];
-            const u_i: number   = uCurrent[N - 1];
-            const u_ip1: number = uCurrent[N - 2];   // ghost cell: u_n = u_{n-2}
-
-            const rhsVal: number =
-                lambda * u_im1 +
-                (1.0 - 2.0 * lambda - beta[i]) * u_i +
-                lambda * u_ip1 +
-                q[i];
-
-            d[i] = rhsVal;
-        }
-
-        thomasAlgorithm(
-            lowerDiagonal,
-            mainDiagonal,
-            upperDiagonal,
-            d,
-            N,
-            modifiedUpper,
-            modifiedRHS,
-            solution,
-        );
-
-        let hasNegative: boolean = false;
-        for (let i: number = 0; i < N; i++) {
-            uNext[i] = solution[i];
-            if (!allowNegativeValues && uNext[i] < 0) {
-                hasNegative = true;
-            }
-        }
-
-        if (hasNegative && !allowNegativeValues) {
-            throw new Error(
-                "Negative concentrations encountered in CNTimeStepping step " + step,
-            );
-        }
-
-        const tmp: Float64Array = uCurrent;
-        uCurrent = uNext;
-        uNext = tmp;
-    }
-
-    for (let i: number = 0; i < N; i++) {
-        concentrationData[i] = uCurrent[i];
-    }
-
-
-```
-
-
-```{.typescript #define-module-globals filename="define-module-globals"}
-
-import { thomasAlgorithm } from "./thomasAlgorithm.js";
-<<declare-grid-params-u>>
-<<declare-lambda-q-beta>>
-<<define-module-vars>>
-```
 
 
 
-```{.typescript #define-setup-logic filename=define-setup-logic}
-    const NChanged: boolean = N !== length;
-    <<assign-grid-params>>
-    <<compute-lambda>>
-    if (NChanged) {
-        <<alloc-q-beta>>
-        <<alloc-diagonals>>
-        <<alloc-u>>
-        <<alloc-thomas-scratch-arrays>>
-    }
-    <<fill-q-beta>>
-
-    if (!rebuildMatrix) {
-        return;
-    }
-
-
-    <<fill-diagonals>>
-    
-
-```
 
 
 ## Space--Time Grid
@@ -407,7 +287,7 @@ stores $u_i^n$, which approximates $u(x_i, t^n)$, and `uNext` stores $u_i^{n+1}$
 
 ### Variable declaration
 
- These variables are declared in `define-module-globals`
+ These variables are declared in `define-global-variables`
 
 ```{.typescript #declare-grid-params-u filename="declare-grid-params-u"}
 let N: number;
@@ -431,8 +311,8 @@ dt = deltaT;
 and the arrays are allocated in `CNSetup` using the grid size `N`.
 
 ```{.typescript #alloc-u filename="alloc-u"}
-if (!uCurrent) uCurrent = new Float64Array(N);
-if (!uNext) uNext = new Float64Array(N);
+uCurrent = new Float64Array(N);
+uNext = new Float64Array(N);
 ```
 
 
@@ -556,7 +436,7 @@ $$
 
 ### Parameter declaration
 
-$\lambda$, $q$, and $\beta$ are declared in `define-module-globals`
+$\lambda$, $q$, and $\beta$ are declared in `define-global-variables`
 
 ```{.typescript #declare-lambda-q-beta filename="declare-lambda-q-beta"}
 let lambda: number;  
@@ -575,8 +455,8 @@ lambda = (D * dt) / (2.0 * dx * dx);
 and the arrays `q` and `beta` are allocated with size `N` in `CNSetup` as well 
 
 ```{.typescript #alloc-q-beta filename="alloc-q-beta"}
-if (!q) q = new Float64Array(N);
-if (!beta) beta = new Float64Array(N);
+q = new Float64Array(N);
+beta = new Float64Array(N);
 ```
 
 and filled using the formulas for $q_i$ and $\beta_i$ derived above.
@@ -816,10 +696,15 @@ $$
 
 The solution vector $u^{n+1}$ is solved from the system $A u^{n+1} = d$ using the Thomas algorithm, which implementation lives in a separate module. 
 
+## Building the tridiagonal matrix $A$
+
+
+The matrix $A$ is built from the lower, main, and upper diagonals.
 
 ### Diagonals declaration
+ 
+The three diagonals are declared in `define-global-variables` as
 
-The matrix $A$ is built from the lower, main, and upper diagonals, which are declared in `define-module-globals` as
 
 ```{.typescript #declare-diagonals filename="declare-diagonals"}
 let lowerDiagonal: Float64Array;
@@ -832,12 +717,12 @@ let upperDiagonal: Float64Array;
 The diagonals are then initialized in `CNSetup` as
 
 ```{.typescript #alloc-diagonals filename="alloc-diagonals"}
-if (!lowerDiagonal) lowerDiagonal = new Float64Array(N);
-if (!mainDiagonal) mainDiagonal = new Float64Array(N);
-if (!upperDiagonal) upperDiagonal = new Float64Array(N);
+lowerDiagonal = new Float64Array(N);
+mainDiagonal = new Float64Array(N);
+upperDiagonal = new Float64Array(N);
 ```
 
-and then filled with their corresponding parameters
+and then filled with their corresponding parameters in 
 
 ```{.typescript #fill-diagonals filename="fill-diagonals"}
     for (let i: number = 1; i < N - 1; i++) {
@@ -857,65 +742,176 @@ and then filled with their corresponding parameters
 ```
 
 
+## Building the right hand side
+
+The entries of the right-hand side vector $d$ is given by @eq-crank-nicolson-tridiagonal. For interior grid points $i = 1,\ldots,N-2$, each entry is
+
+$$
+d_i = \lambda u_{i-1}^n + (1 - 2\lambda - \beta_i) u_i^n + \lambda u_{i+1}^n + q_i.
+$$
+
+To handle the Neumann (zero-flux) boundary conditions we use centered differences to mirror the ghost cells. At the left boundary ($i=0$), zero flux implies $u_{-1} = u_1$, giving
+
+$$
+\begin{aligned}
+d_0
+&= \lambda u_{-1}^n + (1 - 2\lambda - \beta_0) u_0^n + \lambda u_1^n + q_0 \\
+&= (1 - 2\lambda - \beta_0) u_0^n + 2\lambda u_1^n + q_0.
+\end{aligned}
+$$
+
+Similarly, at the right boundary ($i=N-1$), $u_N = u_{N-2}$, so
+
+$$
+d_{N-1} = (1 - 2\lambda - \beta_{N-1}) u_{N-1}^n+  2\lambda u_{N-2}^n + q_{N-1}.
+$$
+
+The ghost-cell mirroring is implemented directly in the code that builds $d$ at each time step inside `<<define-cn-time-stepping>>`
+
+```{.typescript #compute-rhs-vector filename="compute-rhs-vector"}
+
+for (let i: number = 1; i < N - 1; i++) {
+	d[i] = lambda * uCurrent[i - 1] 
+		+ (1.0 - 2.0 * lambda - beta[i]) * uCurrent[i]  
+		+ lambda * uCurrent[i + 1] 
+		+ q[i];
+}
+
+d[0] = (1.0 - 2.0 * lambda - beta[0]) * uCurrent[0] 
+	+ 2.0 * lambda * uCurrent[1] 
+	+ q[0];
+
+d[N - 1] = (1.0 - 2.0 * lambda - beta[N - 1]) * uCurrent[N - 1] 
+	+ 2.0 * lambda * uCurrent[N - 2]  
+	+ q[N - 1];
+```
+
+
+
 ## Thomas‑solver scratch arrays
 
-The Thomas algorithm is a **destructive** solver: during forward elimination it overwrites the upper diagonal and right‑hand side, and during backward substitution it writes the solution into yet another array. If `thomasAlgorithm` allocated these three arrays internally on every call, the time‑stepping loop — which may run hundreds of thousands of iterations — would stress the garbage collector and degrade performance. Instead, the three arrays are pre‑allocated once in `CNSetup` and held at module scope so that the solver runs with **zero per‑step allocation**.
-
-A second benefit is that the original matrix diagonals (`lowerDiagonal`, `mainDiagonal`, `upperDiagonal`) remain untouched. They describe the stationary structure of the tridiagonal system and can be reused across every time step. The scratch arrays isolate the destructive elimination phase from that structural description; only when the source/sink configuration changes (`rebuildMatrix = true`) do the diagonals themselves need recomputation.
-
-| Array | Role | Contents after forward sweep |
-|---|---|---|
-| `modifiedUpper` | Transformed upper diagonal | `c′₀, c′₁, …, c′ₙ₋₂` |
-| `modifiedRHS` | Transformed right‑hand side | `d′₀, d′₁, …, d′ₙ₋₁` |
-| `solution` | Final concentration at time `n+1` | `u₀ⁿ⁺¹, u₁ⁿ⁺¹, …, uₙ₋₁ⁿ⁺¹` |
+The Thomas algorithm's forward elimination overwrites the upper diagonal and right‑hand side, and during backward substitution it writes the solution into yet another array. If `thomasAlgorithm` allocated these three arrays internally on every call, the time‑stepping loop — which may run hundreds of thousands of iterations — would overuse the garbage collector and degrade performance. Instead, the three arrays are pre‑allocated once in `CNSetup` and held at module scope so that the solver runs without allocating new memory on every call.
 
 
-They are declared at `define-module-globals` as
+### Scratch arrays declaration
+
+They are declared at `define-global-variables` as
 
 ```{.typescript #declare-thomas-scratch-arrays filename="declare-thomas-scratch-arrays"}
 let modifiedUpper: Float64Array;
-let modifiedRHS: Float64Array;
+let d: Float64Array;
 let solution: Float64Array;
 ```
 
-and reallocated in `CNSetup` as
+### Scratch arrays allocation
+
+They are reallocated in `CNSetup` as
 
 ```{.typescript #alloc-thomas-scratch-arrays filename="alloc-thomas-scratch-arrays"}
-if (!modifiedUpper) modifiedUpper = new Float64Array(N);
-if (!modifiedRHS) modifiedRHS = new Float64Array(N);
-if (!solution) solution = new Float64Array(N);
+modifiedUpper = new Float64Array(N);
+d = new Float64Array(N);
+solution = new Float64Array(N);
 ```
 
 
 ## Module‑level state
 
-```{.typescript #define-module-vars filename="define-module-vars"}
+We collect all the module‑level variables in the first part of the module together with the import of the Thomas algorithm
 
+```{.typescript #define-global-variables filename="define-global-variables"}
+import { thomasAlgorithm } from "./thomasAlgorithm.js";
+<<declare-grid-params-u>>
+<<declare-lambda-q-beta>>
 <<declare-diagonals>>
 <<declare-thomas-scratch-arrays>>
 ```
 
-## Setting up the Crank‑Nicolson coefficients
+## CN-setup logic
 
-`CNSetup` must be called once before any simulation. It stores
-the grid length and computes the coefficients that define the
-tridiagonal system. Neumann (zero‑flux) boundary conditions are
-implemented by adjusting the first and last rows of the matrix using
-ghost‑cell mirroring.
+We want to rebuild all the $N$-long arrays only when the grid size `N` changes, so we introduce a flag `NChanged` to detect this condition. This allows us to reuse existing arrays when only coefficients change but the grid size stays the same, avoiding unnecessary memory allocations.
 
+
+```{.typescript #define-setup-logic filename=define-setup-logic}
+
+const NChanged: boolean = N !== length;
+
+<<assign-grid-params>>
+<<compute-lambda>>
+
+if (NChanged) {
+        <<alloc-q-beta>>
+        <<alloc-diagonals>>
+        <<alloc-u>>
+        <<alloc-thomas-scratch-arrays>>
+    }
+    <<fill-q-beta>>
+    <<fill-diagonals>>
+
+
+    
+
+```
 
 
 ## The time‑stepping loop
 
-The main `CNTimeStepping` function advances the concentration field by
-`totalNumberOfIterations` time steps. At each step it builds the
-right‑hand side vector using the explicit part of the scheme (including
-source terms and Neumann boundary conditions via ghost‑cell mirroring),
-solves the tridiagonal system with the Thomas algorithm, and then swaps
-the solution arrays for the next iteration.
+We first need to copy the array of concentrations given by the caller into `uCurrent`, then iterate for the requested number of steps. And finally, write the result back into the provided `concentrationData` array.
 
-If a negative concentration appears and `allowNegativeValues` is
-`false`, the function throws an error.
+
+```{.typescript #define-time-stepping-logic filename="define-time-stepping-logic"}
+    
+
+<<receive-initial-concentration>>
+
+    for (let step: number = 0; step < totalNumberOfIterations; step++) {
+
+        <<compute-rhs-vector>>
+
+        thomasAlgorithm(
+            lowerDiagonal,
+            mainDiagonal,
+            upperDiagonal,
+            d,
+            N,
+            modifiedUpper,
+            d,
+            solution,
+        );
+
+        for (let i: number = 0; i < N; i++) {
+            uNext[i] = solution[i];
+            if (uNext[i] < 0) {
+                throw new Error(
+                    "Negative concentration encountered in CNTimeStepping step " + step,
+                );
+            }
+        }
+
+        const tmp: Float64Array = uCurrent;
+        uCurrent = uNext;
+        uNext = tmp;
+    }
+
+
+<<return-final-concentration>>
+
+
+```
+
+
+
+```{.typescript #receive-initial-concentration filename="receive-initial-concentration"}
+for (let i: number = 0; i < N; i++) {
+        uCurrent[i] = concentrationData[i];
+    }
+```
+
+```{.typescript #return-final-concentration filename="return-final-concentration"}
+    for (let i: number = 0; i < N; i++) {
+        concentrationData[i] = uCurrent[i];
+    }
+```
+
 
 
 ## Assembling the module

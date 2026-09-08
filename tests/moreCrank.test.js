@@ -18,7 +18,7 @@ test("zero iterations leaves the field unchanged", () => {
 	const K_O = 0;
 
 	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
-	CNTimeStepping(u, 0, true);
+	CNTimeStepping(u, 0);
 
 	for (let i = 0; i < length; i++) {
 		expect(u[i]).toBeCloseTo(u0[i], 12);
@@ -37,7 +37,7 @@ test("uniform field with no source/decay stays constant", () => {
 	const K_O = 0;
 
 	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
-	CNTimeStepping(u, 500, true);
+	CNTimeStepping(u, 500);
 
 	for (let i = 0; i < length; i++) {
 		expect(u[i]).toBeCloseTo(C, 8);
@@ -58,7 +58,7 @@ test("uniform field decays exponentially, independent of D", () => {
 	const K_O = 0;
 
 	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
-	CNTimeStepping(u, iterations, true);
+	CNTimeStepping(u, iterations);
 
 	const expected = C * Math.exp(-k * totalTime);
 	for (let i = 0; i < length; i++) {
@@ -76,21 +76,21 @@ test("uniform field decays exponentially, independent of D", () => {
 		const totalTime = 20;
 		const iterations = Math.floor(totalTime / dt);
 
-		const u = new Float64Array(length).map((_, i) => Math.cos((n * Math.PI * (i * deltaX)) / L));
+		const u = new Float64Array(length).map((_, i) => 1 + Math.cos((n * Math.PI * (i * deltaX)) / L));
 		const sourceCounts = new Float64Array(length).fill(0);
 		const sinkCounts = new Float64Array(length).fill(1);
 		const K_I = k * deltaX;
 		const K_O = 0;
 
 		CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
-		CNTimeStepping(u, iterations, true);
+		CNTimeStepping(u, iterations);
 
 		const lambda = k + D * Math.pow((n * Math.PI) / L, 2);
 		const decay = Math.exp(-lambda * totalTime);
+		const uniformDecay = Math.exp(-k * totalTime);
 
-		// check a handful of interior points, avoiding boundary discretization noise
 		for (let i = Math.floor(length * 0.2); i <= Math.floor(length * 0.8); i += 20) {
-			const expected = decay * Math.cos((n * Math.PI * (i * deltaX)) / L);
+			const expected = uniformDecay + decay * Math.cos((n * Math.PI * (i * deltaX)) / L);
 			expect(u[i]).toBeCloseTo(expected, 2);
 		}
 	});
@@ -110,7 +110,7 @@ test("total mass is conserved with reflective BC (no source/decay)", () => {
 	const massBefore = u.reduce((a, b) => a + b, 0) * deltaX;
 
 	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
-	CNTimeStepping(u, 2000, true);
+	CNTimeStepping(u, 2000);
 
 	const massAfter = u.reduce((a, b) => a + b, 0) * deltaX;
 	expect(massAfter).toBeCloseTo(massBefore, 3);
@@ -132,7 +132,7 @@ test("mass grows linearly with constant source under reflective BC", () => {
 	const massBefore = u.reduce((a, b) => a + b, 0) * deltaX;
 
 	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
-	CNTimeStepping(u, iterations, true);
+	CNTimeStepping(u, iterations);
 
 	const massAfter = u.reduce((a, b) => a + b, 0) * deltaX;
 	const expectedGrowth = S0 * (length * deltaX) * totalTime;
@@ -151,7 +151,7 @@ test("converges to uniform steady state S0/k with constant source and decay", ()
 	const K_O = S0 * deltaX;
 
 	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
-	CNTimeStepping(u, 20000, true); // run long enough to reach steady state
+	CNTimeStepping(u, 20000); // run long enough to reach steady state
 
 	const expected = S0 / k;
 	for (let i = 0; i < length; i++) {
@@ -164,14 +164,14 @@ test("converges to uniform steady state S0/k with constant source and decay", ()
 // -----------------------------------------------------------------------
 test("symmetric initial condition remains symmetric in time", () => {
 	const D = 2, k = 0.01, dt = 0.1;
-	const u = new Float64Array(length).map((_, i) => Math.cos((2 * Math.PI * i * deltaX) / L)); // symmetric about midpoint
+	const u = new Float64Array(length).map((_, i) => 1 + Math.cos((2 * Math.PI * i * deltaX) / L)); // symmetric about midpoint
 	const sourceCounts = new Float64Array(length).fill(0);
 	const sinkCounts = new Float64Array(length).fill(1);
 	const K_I = k * deltaX;
 	const K_O = 0;
 
 	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
-	CNTimeStepping(u, 500, true);
+	CNTimeStepping(u, 500);
 
 	for (let i = 0; i < length; i++) {
 		expect(u[i]).toBeCloseTo(u[length - 1 - i], 6);
