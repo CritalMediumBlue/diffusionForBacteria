@@ -31,8 +31,10 @@ const tolerance: number = 1e-10;
 
 The function accepts the three diagonals (`lowerDiagonal`, `mainDiagonal`,
 `upperDiagonal`), the right‑hand side vector, the system size `n`, and
-three pre‑allocated work arrays. The solution is written directly into
-the `solution` array.
+two pre‑allocated work arrays. The right‑hand side is modified **in place**
+during forward elimination and then reused as scratch space for the
+modified upper diagonal. The solution is written directly into the
+`solution` array.
 
 ```{.typescript #thomas-signature}
 /**
@@ -57,10 +59,9 @@ the `solution` array.
  * @param {Float64Array|Array<number>} upperDiagonal - Upper diagonal elements (c₀, c₁, ..., cₙ₋₂).
  *                                        Last element (index n-1) is ignored as it doesn't exist.
  * @param {Float64Array|Array<number>} rightHandSide - Right-hand side vector (d₀, d₁, ..., dₙ₋₁).
+ *                                       Modified in place during forward elimination.
  * @param {number} n - Size of the system (number of equations/unknowns).
  * @param {Float64Array|Array<number>} modifiedUpperDiagonal - Pre-allocated array to store modified upper diagonal
- *                                                during forward elimination. Must have length n.
- * @param {Float64Array|Array<number>} modifiedRightHandSide - Pre-allocated array to store modified right-hand side
  *                                                during forward elimination. Must have length n.
  * @param {Float64Array|Array<number>} solution - Pre-allocated array where the solution vector will be stored.
  *                                   Must have length n. Contains (x₀, x₁, ..., xₙ₋₁) after execution.
@@ -83,10 +84,9 @@ the `solution` array.
  *
  * // Pre-allocate working arrays
  * const modUpper = new Float64Array(n);
- * const modRHS = new Float64Array(n);
  * const solution = new Float64Array(n);
  *
- * thomasAlgorithm(lower, main, upper, rhs, n, modUpper, modRHS, solution);
+ * thomasAlgorithm(lower, main, upper, rhs, n, modUpper, solution);
  * console.log(solution); // [1, 1, 1]
  *
  * @see {@link ADI} Uses this algorithm for implicit solving
@@ -100,7 +100,6 @@ export function thomasAlgorithm(
     rightHandSide: Float64Array,
     n: number,
     modifiedUpperDiagonal: Float64Array,
-    modifiedRightHandSide: Float64Array,
     solution: Float64Array,
 ): void {
 ```
@@ -130,13 +129,13 @@ is checked against the tolerance to avoid division by zero.
 
     // Normalize first row: divide upper diagonal and RHS by pivot
     modifiedUpperDiagonal[0] = upperDiagonal[0] * invPivot;
-    modifiedRightHandSide[0] = rightHandSide[0] * invPivot;
+    rightHandSide[0] = rightHandSide[0] * invPivot;
 
     // Process remaining rows (i = 1 to n-1)
     for (let i: number = 1; i < n; i++) {
         const l_i: number = lowerDiagonal[i]; // Lower diagonal element at row i
         const u_prime_prev: number = modifiedUpperDiagonal[i - 1]; // Modified upper diagonal from previous row
-        const d_prime_prev: number = modifiedRightHandSide[i - 1]; // Modified RHS from previous row
+        const d_prime_prev: number = rightHandSide[i - 1]; // Modified RHS from previous row
 
         // Calculate the new diagonal element after eliminating lower diagonal
         // This is: b_i - a_i * c'_{i-1}
@@ -153,7 +152,7 @@ is checked against the tolerance to avoid division by zero.
         // Modified upper diagonal: c_i / (b_i - a_i * c'_{i-1})
         modifiedUpperDiagonal[i] = upperDiagonal[i] * invDenominator;
         // Modified RHS: (d_i - a_i * d'_{i-1}) / (b_i - a_i * c'_{i-1})
-        modifiedRightHandSide[i] = (rightHandSide[i] - l_i * d_prime_prev) * invDenominator;
+        rightHandSide[i] = (rightHandSide[i] - l_i * d_prime_prev) * invDenominator;
     }
 ```
 
@@ -170,12 +169,12 @@ backwards to compute the remaining values.
     // Solve the upper triangular system by working backwards from the last equation.
 
     // Last equation is already solved: x_{n-1} = d'_{n-1}
-    solution[n - 1] = modifiedRightHandSide[n - 1];
+    solution[n - 1] = rightHandSide[n - 1];
 
     // Solve remaining equations working backwards
     for (let i: number = n - 2; i >= 0; i--) {
         // x_i = d'_i - c'_i * x_{i+1}
-        solution[i] = modifiedRightHandSide[i] - modifiedUpperDiagonal[i] * solution[i + 1];
+        solution[i] = rightHandSide[i] - modifiedUpperDiagonal[i] * solution[i + 1];
     }
 }
 ```

@@ -54,7 +54,6 @@ describe("Thomas Algorithm", () => {
             const expectedSolution = [23.25, 43.5, 62.75, 57.0, 43.25];
 
             const modUpperDiag = new Float64Array(systemSize);
-            const modRightSide = new Float64Array(systemSize);
             const solutionArray = new Float64Array(systemSize);
 
             // Act
@@ -65,7 +64,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide,
                 systemSize,
                 modUpperDiag,
-                modRightSide,
                 solutionArray
             );
 
@@ -85,7 +83,6 @@ describe("Thomas Algorithm", () => {
             const expectedSolution = [23.25, 43.5, 62.75, 57.0, 43.25];
 
             const modUpperDiag = new Float64Array(systemSize);
-            const modRightSide = new Float64Array(systemSize);
             const solutionArray = new Float64Array(systemSize);
 
             // Act
@@ -96,7 +93,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide,
                 systemSize,
                 modUpperDiag,
-                modRightSide,
                 solutionArray
             );
 
@@ -116,7 +112,6 @@ describe("Thomas Algorithm", () => {
             const expectedSolution = [23.25, 43.5, 62.75, 57.0, 43.25];
 
             const modUpperDiag = new Float64Array(systemSize);
-            const modRightSide = new Float64Array(systemSize);
             const solutionArray = new Float64Array(systemSize);
 
             // Act
@@ -127,7 +122,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide,
                 systemSize,
                 modUpperDiag,
-                modRightSide,
                 solutionArray
             );
 
@@ -147,7 +141,6 @@ describe("Thomas Algorithm", () => {
             const expectedSolution = [23.25, 43.5, 62.75, 57.0, 43.25];
 
             const modUpperDiag = new Float64Array(systemSize);
-            const modRightSide = new Float64Array(systemSize);
             const solutionArray = new Float64Array(systemSize);
 
             // Act
@@ -158,7 +151,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide,
                 systemSize,
                 modUpperDiag,
-                modRightSide,
                 solutionArray
             );
 
@@ -177,7 +169,6 @@ describe("Thomas Algorithm", () => {
             const rightHandSide1 = [3.14159265, 42, 25, 8, 28];
 
             const modUpperDiag1 = new Float64Array(systemSize);
-            const modRightSide1 = new Float64Array(systemSize);
             const solutionArray1 = new Float64Array(systemSize);
 
             const lowerDiagonal2 = [0, -1, -1, -1, -3];
@@ -186,7 +177,6 @@ describe("Thomas Algorithm", () => {
             const rightHandSide2 = [3.14159265, 42, 25, 8, 28];
 
             const modUpperDiag2 = new Float64Array(systemSize);
-            const modRightSide2 = new Float64Array(systemSize);
             const solutionArray2 = new Float64Array(systemSize);
 
             // Act
@@ -197,7 +187,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide1,
                 systemSize,
                 modUpperDiag1,
-                modRightSide1,
                 solutionArray1
             );
 
@@ -208,7 +197,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide2,
                 systemSize,
                 modUpperDiag2,
-                modRightSide2,
                 solutionArray2
             );
 
@@ -227,7 +215,6 @@ describe("Thomas Algorithm", () => {
             const rightHandSide1 = [3.14159265358979, 42, 1.5, 28, 2];
 
             const modUpperDiag1 = new Float64Array(systemSize);
-            const modRightSide1 = new Float64Array(systemSize);
             const solutionArray1 = new Float64Array(systemSize);
 
             const lowerDiagonal2 = [0, -1, -1, -1, -3];
@@ -236,7 +223,6 @@ describe("Thomas Algorithm", () => {
             const rightHandSide2 = [3.14159265358979, 42, 1.5, 28, 2];
 
             const modUpperDiag2 = new Float64Array(systemSize);
-            const modRightSide2 = new Float64Array(systemSize);
             const solutionArray2 = new Float64Array(systemSize);
 
             // Act
@@ -247,7 +233,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide1,
                 systemSize,
                 modUpperDiag1,
-                modRightSide1,
                 solutionArray1
             );
 
@@ -258,7 +243,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide2,
                 systemSize,
                 modUpperDiag2,
-                modRightSide2,
                 solutionArray2
             );
 
@@ -277,7 +261,6 @@ describe("Thomas Algorithm", () => {
             const rightHandSide1 = [123, 456, 3.1415926535, 8, 42];
 
             const modUpperDiag1 = new Float64Array(systemSize);
-            const modRightSide1 = new Float64Array(systemSize);
             const solutionArray1 = new Float64Array(systemSize);
 
             const lowerDiagonal2 = [0, -1, -1, -1, -3];
@@ -286,7 +269,6 @@ describe("Thomas Algorithm", () => {
             const rightHandSide2 = [123, 456, 3.1415926535, 8, 42];
 
             const modUpperDiag2 = new Float64Array(systemSize);
-            const modRightSide2 = new Float64Array(systemSize);
             const solutionArray2 = new Float64Array(systemSize);
 
             // Act
@@ -297,7 +279,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide1,
                 systemSize,
                 modUpperDiag1,
-                modRightSide1,
                 solutionArray1
             );
 
@@ -308,7 +289,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide2,
                 systemSize,
                 modUpperDiag2,
-                modRightSide2,
                 solutionArray2
             );
 
@@ -326,7 +306,6 @@ describe("Thomas Algorithm", () => {
             const rightHandSide1 = [123, 456, 3.1415926535, 8, 42];
 
             const modUpperDiag1 = new Float64Array(n);
-            const modRightSide1 = new Float64Array(n);
             const solutionArray1 = new Float64Array(n);
 
             const lowerDiagonal2 = [0, -1, -1, -1, -3];
@@ -335,7 +314,6 @@ describe("Thomas Algorithm", () => {
             const rightHandSide2 = [123, 456, 3.1415926535, 8, 42];
 
             const modUpperDiag2 = new Float64Array(n);
-            const modRightSide2 = new Float64Array(n);
             const solutionArray2 = new Float64Array(n);
 
             // Act
@@ -346,7 +324,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide1,
                 n,
                 modUpperDiag1,
-                modRightSide1,
                 solutionArray1
             );
 
@@ -357,7 +334,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide2,
                 n,
                 modUpperDiag2,
-                modRightSide2,
                 solutionArray2
             );
 
@@ -389,7 +365,6 @@ describe("Thomas Algorithm", () => {
                 n
             );
             const modUpperDiag = new Float64Array(n);
-            const modRightSide = new Float64Array(n);
             const solutionArray = new Float64Array(n);
 
             // Act
@@ -400,7 +375,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide,
                 n,
                 modUpperDiag,
-                modRightSide,
                 solutionArray
             );
 
@@ -431,7 +405,6 @@ describe("Thomas Algorithm", () => {
                 n
             );
             const modUpperDiag = new Float64Array(n);
-            const modRightSide = new Float64Array(n);
             const solutionArray = new Float64Array(n);
 
             // Act
@@ -442,7 +415,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide,
                 n,
                 modUpperDiag,
-                modRightSide,
                 solutionArray
             );
 
@@ -473,7 +445,6 @@ describe("Thomas Algorithm", () => {
                 n
             );
             const modUpperDiag = new Float64Array(n);
-            const modRightSide = new Float64Array(n);
             const solutionArray = new Float64Array(n);
 
             // Act
@@ -484,7 +455,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide,
                 n,
                 modUpperDiag,
-                modRightSide,
                 solutionArray
             );
 
@@ -514,7 +484,6 @@ describe("Thomas Algorithm", () => {
                 n
             );
             const modUpperDiag = new Float64Array(n);
-            const modRightSide = new Float64Array(n);
             const solutionArray = new Float64Array(n);
 
             // Act
@@ -525,7 +494,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide,
                 n,
                 modUpperDiag,
-                modRightSide,
                 solutionArray
             );
 
@@ -555,7 +523,6 @@ describe("Thomas Algorithm", () => {
                 n
             );
             const modUpperDiag = new Float64Array(n);
-            const modRightSide = new Float64Array(n);
             const solutionArray = new Float64Array(n);
 
             // Act
@@ -566,7 +533,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide,
                 n,
                 modUpperDiag,
-                modRightSide,
                 solutionArray
             );
 
@@ -596,7 +562,6 @@ describe("Thomas Algorithm", () => {
                 n
             );
             const modUpperDiag = new Float64Array(n);
-            const modRightSide = new Float64Array(n);
             const solutionArray = new Float64Array(n);
 
             // Act
@@ -607,7 +572,6 @@ describe("Thomas Algorithm", () => {
                 rightHandSide,
                 n,
                 modUpperDiag,
-                modRightSide,
                 solutionArray
             );
 

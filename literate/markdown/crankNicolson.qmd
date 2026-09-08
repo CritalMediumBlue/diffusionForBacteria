@@ -790,7 +790,7 @@ d[N - 1] = (1.0 - 2.0 * lambda - beta[N - 1]) * uCurrent[N - 1]
 
 ## Thomas‑solver scratch arrays
 
-The Thomas algorithm's forward elimination overwrites the upper diagonal and right‑hand side, and during backward substitution it writes the solution into yet another array. If `thomasAlgorithm` allocated these three arrays internally on every call, the time‑stepping loop — which may run hundreds of thousands of iterations — would overuse the garbage collector and degrade performance. Instead, the three arrays are pre‑allocated once in `CNSetup` and held at module scope so that the solver runs without allocating new memory on every call.
+The Thomas algorithm modifies the right‑hand side in place during forward elimination and needs a scratch buffer for the modified upper diagonal. Pre‑allocating these at module scope avoids re‑allocating on every time step.
 
 
 ### Scratch arrays declaration
@@ -800,7 +800,6 @@ They are declared at `define-global-variables` as
 ```{.typescript #declare-thomas-scratch-arrays filename="declare-thomas-scratch-arrays"}
 let modifiedUpper: Float64Array;
 let d: Float64Array;
-let solution: Float64Array;
 ```
 
 ### Scratch arrays allocation
@@ -810,7 +809,6 @@ They are reallocated in `CNSetup` as
 ```{.typescript #alloc-thomas-scratch-arrays filename="alloc-thomas-scratch-arrays"}
 modifiedUpper = new Float64Array(N);
 d = new Float64Array(N);
-solution = new Float64Array(N);
 ```
 
 
@@ -874,18 +872,11 @@ We first need to copy the array of concentrations given by the caller into `uCur
             d,
             N,
             modifiedUpper,
-            d,
-            solution,
+            uNext,
         );
 
-        for (let i: number = 0; i < N; i++) {
-            uNext[i] = solution[i];
-            if (uNext[i] < 0) {
-                throw new Error(
-                    "Negative concentration encountered in CNTimeStepping step " + step,
-                );
-            }
-        }
+ <<check-for-negative-concentration>>
+
 
         const tmp: Float64Array = uCurrent;
         uCurrent = uNext;
@@ -911,8 +902,15 @@ for (let i: number = 0; i < N; i++) {
         concentrationData[i] = uCurrent[i];
     }
 ```
-
-
+```{.typescript #check-for-negative-concentration filename="check-for-negative-concentration"}
+        for (let i: number = 0; i < N; i++) {
+            if (uNext[i] < 0) {
+                throw new Error(
+                    "Negative concentration encountered in CNTimeStepping step " + step,
+                );
+            }
+        }
+```
 
 ## Assembling the module
 
