@@ -2,7 +2,7 @@
 
 ## Biological problem
 
-We consider a substance with concentration $u(x,t)$ that diffuses in one spatial dimension with a constant diffusion coefficient $D$. Point-like agents that act as sources and sinks in this one dimensional space, they may secrete the substance into the environment or remove it through uptake. These point-like agents might represent individual bacterium or discrete protein clusters positioned at specific locations along a filament or channel.
+We consider a substance with concentration $u(x,t)$ that diffuses in one spatial dimension with a constant diffusion coefficient $D$. Point-like agents that act as sources and sinks in this one dimensional space. They may secrete the substance into the environment or remove it through uptake. These point-like agents might represent individual bacterium or discrete protein clusters positioned at specific locations along a filament or channel.
 
 :::{.callout-note title="Dimensions and units"}
 
@@ -138,21 +138,13 @@ export const CNTimeStepping = (
 //|code-fold: true
 d3 = require("d3@7")
 
-N = 6 // number of grid points, indices 0..5
-
-  schematic = {
+drawGrid = (N) => {
     const width = 420, height = 240;
     const marginX = 60;
 
     const displayItems = (() => {
       if (N <= 5) {
-        return d3.range(N).map(i => {
-          const item = { type: "node", i, x: i };
-          if (i === N - 2) item.indexLabel = "N-2";
-          else if (i === N - 1) item.indexLabel = "N-1";
-          else item.indexLabel = String(i);
-          return item;
-        });
+        return d3.range(N).map(i => ({ type: "node", i, x: i, indexLabel: String(i) }));
       }
       return [
         { type: "node", i: 0, x: 0, indexLabel: "0" },
@@ -279,6 +271,8 @@ N = 6 // number of grid points, indices 0..5
   container.appendChild(svg.node());
   return container;
 }
+
+schematicN6 = drawGrid(6) // number of grid points, indices 0..5
 ```
 
 
@@ -507,7 +501,10 @@ $$
 +q_i.
 $$ {#eq-crank-nicolson-tridiagonal}
 
-This equation applies to every grid point $i=0,\ldots,N-1$, so that for a spatial domain with $N$ grid points, we obtain a system of $N$ linear equations. For a case with Neuman boundary conditions, the system can be written in matrix form as $A u^{n+1} = d$, where $A$ is the $N \times N$ tridiagonal matrix
+
+
+
+This equation applies to every grid point $i=0,\ldots,N-1$, so that for a spatial domain with $N$ grid points, we obtain a system of $N$ linear equations. For a case with Neumann boundary conditions, the system can be written in matrix form as $A u^{n+1} = d$, where $A$ is the $N \times N$ tridiagonal matrix
 
 $$
 A =
@@ -550,7 +547,14 @@ Here, the entries of $A$ and $d$ at the boundaries $i=0$ and $i=N-1$ incorporate
 
 
 
+
+
 :::{.callout-note collapse=true title='Example for $N=5$ and Neuman BC'}
+
+```{ojs}
+//|code-fold: true
+schematicN5 = drawGrid(5)
+```
 
 If we apply this equation to $5$ grid points ($i=0,1,2,3,4$), we obtain a system of $5$ linear equations for the unknowns $u_i^{n+1}$ 
 
@@ -689,7 +693,7 @@ $$
 :::
 
 
-The solution vector $u^{n+1}$ is solved from the system $A u^{n+1} = d$ using the Thomas algorithm, which implementation lives in a separate module. 
+The solution vector $u^{n+1}$ is solved from the system $A u^{n+1} = d$ using the Thomas algorithm, whose implementation lives in a separate module. 
 
 ## Building the tridiagonal matrix $A$
 
@@ -870,9 +874,6 @@ We first need to copy the array of concentrations given by the caller into `uCur
             uNext,
         );
 
- <<check-for-negative-concentration>>
-
-
         const tmp: Float64Array = uCurrent;
         uCurrent = uNext;
         uNext = tmp;
@@ -897,19 +898,5 @@ for (let i: number = 0; i < N; i++) {
         initialConcentration[i] = uCurrent[i];
     }
 ```
-```{.typescript #check-for-negative-concentration filename="check-for-negative-concentration"}
-        for (let i: number = 0; i < N; i++) {
-            if (uNext[i] < 0) {
-                throw new Error(
-                    "Negative concentration encountered in CNTimeStepping step " + step,
-                );
-            }
-        }
-```
-
-## Assembling the module
-
-The final code block tells Entangled to write the file
-`src/crankNicolson.js` by concatenating all the pieces defined above.
 
 

@@ -7,6 +7,28 @@ Crank‑Nicolson methods. Because the coefficient matrix is tridiagonal,
 the algorithm avoids the O(n³) cost of a general solver and requires
 only a few pre‑allocated work arrays.
 
+## The tridiagonal problem
+
+The algorithm solves a linear system of the form
+
+$$
+a_i x_{i-1} + b_i x_i + c_i x_{i+1} = d_i, \qquad i = 0, \ldots, n-1,
+$$ {#eq-thomas-system}
+
+with $a_0 = 0$ and $c_{n-1} = 0$, since $x_{-1}$ and $x_n$ do not exist.
+Here, $a_i$, $b_i$, and $c_i$ are the entries of the lower, main, and
+upper diagonals of the coefficient matrix, $d_i$ is the right-hand side,
+and $x_i$ is the unknown solution. These correspond directly to the
+function's parameters: `lowerDiagonal`, `mainDiagonal`, `upperDiagonal`,
+`rightHandSide`, and `solution`, respectively.
+
+In this project, @eq-thomas-system is the system built in
+`crankNicolson.qmd` (@eq-crank-nicolson-tridiagonal): there,
+$b_i = 1 + 2\lambda + \beta_i$ and $a_i = c_i = -\lambda$ (with the
+Neumann boundary adjustments), so that $b_i > |a_i| + |c_i|$ for
+$\lambda,\beta_i \geq 0$. The matrix is therefore diagonally dominant,
+which is what makes the elimination below stable without pivoting.
+
 The module exports a single function, `thomasAlgorithm`, which performs
 the forward elimination and backward substitution in‑place using the
 provided scratch arrays.
@@ -19,80 +41,93 @@ threshold, it is replaced by the tolerance (with the original sign) so
 that the algorithm can continue without a hard crash.
 
 ```{.typescript #thomas-tolerance}
-/**
- * Numerical tolerance for pivot detection to prevent division by zero.
- * MATLAB and other solver documentation recommend tolerances around 1e-10.
- * @constant {number}
- */
 const tolerance: number = 1e-10;
+```
+
+## Forward elimination
+
+The forward sweep transforms the tridiagonal matrix into an upper
+triangular form. Each row $i$ is combined with row $i-1$ to eliminate
+the sub‑diagonal entry $a_i$, producing a modified upper diagonal
+$c'_i$ and a modified right-hand side $d'_i$:
+
+$$
+c'_0 = \frac{c_0}{b_0}, \qquad
+d'_0 = \frac{d_0}{b_0},
+$$
+
+$$
+c'_i = \frac{c_i}{b_i - a_i c'_{i-1}}, \qquad
+d'_i = \frac{d_i - a_i d'_{i-1}}{b_i - a_i c'_{i-1}},
+\qquad i = 1, \ldots, n-1.
+$$ {#eq-thomas-forward}
+
+After this sweep, @eq-thomas-system is equivalent to the upper
+bidiagonal system $x_i + c'_i x_{i+1} = d'_i$ (with $c'_{n-1}=0$),
+which is solved directly by back-substitution below. The pivot
+$b_i - a_i c'_{i-1}$ (and $b_0$ for the first row) is checked against
+the tolerance defined above to avoid division by zero.
+
+```{.typescript #thomas-forward filename="thomas-forward"}
+
+    let pivot: number = mainDiagonal[0];
+    if (Math.abs(pivot) < tolerance) {
+        pivot = pivot >= 0 ? tolerance : -tolerance;
+    }
+    const invPivot: number = 1.0 / pivot;
+
+    modifiedUpperDiagonal[0] = upperDiagonal[0] * invPivot;
+    rightHandSide[0] = rightHandSide[0] * invPivot;
+
+    for (let i: number = 1; i < n; i++) {
+        const l_i: number = lowerDiagonal[i]; // Lower diagonal element at row i
+        const u_prime_prev: number = modifiedUpperDiagonal[i - 1]; // Modified upper diagonal from previous row
+        const d_prime_prev: number = rightHandSide[i - 1]; // Modified RHS from previous row
+
+        let currentDenominator: number = mainDiagonal[i] - l_i * u_prime_prev;
+
+        if (Math.abs(currentDenominator) < tolerance) {
+            currentDenominator = currentDenominator >= 0 ? tolerance : -tolerance;
+        }
+        const invDenominator: number = 1.0 / currentDenominator;
+
+        modifiedUpperDiagonal[i] = upperDiagonal[i] * invDenominator;
+        rightHandSide[i] = (rightHandSide[i] - l_i * d_prime_prev) * invDenominator;
+    }
+```
+
+## Backward substitution
+
+Once the matrix is upper bidiagonal, the solution is obtained directly:
+
+$$
+x_{n-1} = d'_{n-1}, \qquad
+x_i = d'_i - c'_i\, x_{i+1}, \qquad i = n-2, \ldots, 0.
+$$ {#eq-thomas-backward}
+
+The last unknown $x_{n-1}$ is already isolated, so we work backwards
+from it to compute the remaining values.
+
+```{.typescript #thomas-backward filename="thomas-backward"}
+
+    solution[n - 1] = rightHandSide[n - 1];
+
+    for (let i: number = n - 2; i >= 0; i--) {
+        solution[i] = rightHandSide[i] - modifiedUpperDiagonal[i] * solution[i + 1];
+    }
 ```
 
 ## Function signature and documentation
 
 The function accepts the three diagonals (`lowerDiagonal`, `mainDiagonal`,
 `upperDiagonal`), the right‑hand side vector, the system size `n`, and
-two pre‑allocated work arrays. The right‑hand side is modified **in place**
+two pre‑allocated work arrays. It implements @eq-thomas-forward followed
+by @eq-thomas-backward. The right‑hand side is modified **in place**
 during forward elimination and then reused as scratch space for the
-modified upper diagonal. The solution is written directly into the
-`solution` array.
+modified upper diagonal ($c'_i$). The solution ($x_i$) is written
+directly into the `solution` array.
 
 ```{.typescript #thomas-signature}
-/**
- * Solves a tridiagonal system of linear equations using the Thomas algorithm.
- *
- * The Thomas algorithm is a specialized form of Gaussian elimination for tridiagonal matrices
- * that runs in O(n) time complexity. It's particularly useful for solving systems arising from
- * finite difference discretizations of differential equations, such as diffusion equations.
- *
- * The algorithm solves systems of the form:
- * ```
- * [b₀ c₀  0  0 ...] [x₀]   [d₀]
- * [a₁ b₁ c₁  0 ...] [x₁]   [d₁]
- * [ 0 a₂ b₂ c₂ ...] [x₂] = [d₂]
- * [ 0  0 a₃ b₃ ...] [x₃]   [d₃]
- * [...            ] [..]   [..]
- * ```
- *
- * @param {Float64Array|Array<number>} lowerDiagonal - Lower diagonal elements (a₁, a₂, ..., aₙ₋₁).
- *                                        First element (index 0) is ignored as it doesn't exist.
- * @param {Float64Array|Array<number>} mainDiagonal - Main diagonal elements (b₀, b₁, ..., bₙ₋₁).
- * @param {Float64Array|Array<number>} upperDiagonal - Upper diagonal elements (c₀, c₁, ..., cₙ₋₂).
- *                                        Last element (index n-1) is ignored as it doesn't exist.
- * @param {Float64Array|Array<number>} rightHandSide - Right-hand side vector (d₀, d₁, ..., dₙ₋₁).
- *                                       Modified in place during forward elimination.
- * @param {number} n - Size of the system (number of equations/unknowns).
- * @param {Float64Array|Array<number>} modifiedUpperDiagonal - Pre-allocated array to store modified upper diagonal
- *                                                during forward elimination. Must have length n.
- * @param {Float64Array|Array<number>} solution - Pre-allocated array where the solution vector will be stored.
- *                                   Must have length n. Contains (x₀, x₁, ..., xₙ₋₁) after execution.
- *
- * @returns {void} The function modifies the `solution` array in-place.
- *
- * @note The algorithm handles near-singular matrices by replacing pivots smaller than
- * 1e-10 with the tolerance value to prevent division by zero. For truly singular matrices,
- * results may be numerically unstable.
- *
- * @complexity Time: O(n), Space: O(1) additional (uses pre-allocated arrays)
- *
- * @example
- * // Solve a simple 3x3 tridiagonal system
- * const n = 3;
- * const lower = [0, 1, 1];          // First element unused
- * const main = [2, 2, 2];
- * const upper = [1, 1, 0];          // Last element unused
- * const rhs = [3, 4, 3];
- *
- * // Pre-allocate working arrays
- * const modUpper = new Float64Array(n);
- * const solution = new Float64Array(n);
- *
- * thomasAlgorithm(lower, main, upper, rhs, n, modUpper, solution);
- * console.log(solution); // [1, 1, 1]
- *
- * @see {@link ADI} Uses this algorithm for implicit solving
- * @see {@link initADIArrays} Pre-allocates working arrays
- *
- */
 export function thomasAlgorithm(
     lowerDiagonal: Float64Array,
     mainDiagonal: Float64Array,
@@ -102,80 +137,8 @@ export function thomasAlgorithm(
     modifiedUpperDiagonal: Float64Array,
     solution: Float64Array,
 ): void {
-```
-
-## Forward elimination
-
-The forward sweep transforms the tridiagonal matrix into an upper
-triangular form. For each row `i`, we eliminate the sub‑diagonal element
-`aᵢ` using the modified upper diagonal from the previous row. The pivot
-is checked against the tolerance to avoid division by zero.
-
-```{.typescript #thomas-forward}
-    // =====================================================================
-    // FORWARD ELIMINATION PHASE
-    // =====================================================================
-    // Transform the tridiagonal matrix to upper triangular form by eliminating
-    // the lower diagonal elements. This modifies the upper diagonal and RHS.
-
-    // Handle the first row (i = 0)
-    // Check for near-zero pivot to prevent numerical instability
-    let pivot: number = mainDiagonal[0];
-    if (Math.abs(pivot) < tolerance) {
-        // Replace near-zero pivot with tolerance to avoid division by zero
-        pivot = pivot >= 0 ? tolerance : -tolerance;
-    }
-    const invPivot: number = 1.0 / pivot;
-
-    // Normalize first row: divide upper diagonal and RHS by pivot
-    modifiedUpperDiagonal[0] = upperDiagonal[0] * invPivot;
-    rightHandSide[0] = rightHandSide[0] * invPivot;
-
-    // Process remaining rows (i = 1 to n-1)
-    for (let i: number = 1; i < n; i++) {
-        const l_i: number = lowerDiagonal[i]; // Lower diagonal element at row i
-        const u_prime_prev: number = modifiedUpperDiagonal[i - 1]; // Modified upper diagonal from previous row
-        const d_prime_prev: number = rightHandSide[i - 1]; // Modified RHS from previous row
-
-        // Calculate the new diagonal element after eliminating lower diagonal
-        // This is: b_i - a_i * c'_{i-1}
-        let currentDenominator: number = mainDiagonal[i] - l_i * u_prime_prev;
-
-        // Check for near-zero denominator to prevent numerical instability
-        if (Math.abs(currentDenominator) < tolerance) {
-            // Replace near-zero denominator with tolerance to avoid division by zero
-            currentDenominator = currentDenominator >= 0 ? tolerance : -tolerance;
-        }
-        const invDenominator: number = 1.0 / currentDenominator;
-
-        // Update modified arrays for current row
-        // Modified upper diagonal: c_i / (b_i - a_i * c'_{i-1})
-        modifiedUpperDiagonal[i] = upperDiagonal[i] * invDenominator;
-        // Modified RHS: (d_i - a_i * d'_{i-1}) / (b_i - a_i * c'_{i-1})
-        rightHandSide[i] = (rightHandSide[i] - l_i * d_prime_prev) * invDenominator;
-    }
-```
-
-## Backward substitution
-
-Once the matrix is upper triangular, the solution is obtained by
-back‑substitution. The last unknown is already isolated, and we work
-backwards to compute the remaining values.
-
-```{.typescript #thomas-backward}
-    // =====================================================================
-    // BACKWARD SUBSTITUTION PHASE
-    // =====================================================================
-    // Solve the upper triangular system by working backwards from the last equation.
-
-    // Last equation is already solved: x_{n-1} = d'_{n-1}
-    solution[n - 1] = rightHandSide[n - 1];
-
-    // Solve remaining equations working backwards
-    for (let i: number = n - 2; i >= 0; i--) {
-        // x_i = d'_i - c'_i * x_{i+1}
-        solution[i] = rightHandSide[i] - modifiedUpperDiagonal[i] * solution[i + 1];
-    }
+<<thomas-forward>>
+<<thomas-backward>>
 }
 ```
 
@@ -188,6 +151,4 @@ The final code block tells Entangled to write the file
 <<thomas-tolerance>>
 
 <<thomas-signature>>
-<<thomas-forward>>
-<<thomas-backward>>
 ```
