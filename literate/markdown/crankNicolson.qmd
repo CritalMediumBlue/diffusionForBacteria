@@ -90,10 +90,10 @@ In `define-global-variables` we will define the arrays and variables that are sh
 ```{.typescript #define-cn-setup filename="define-cn-setup"}
 
 export const CNSetup = (
-    length: number,
+    numberOfGridPoints: number,
     D: number,
-    deltaX: number,
-    deltaT: number,
+    dx: number,
+    dt: number,
     K_I: number,
     K_O: number,
     sinkCounts: Float64Array,
@@ -114,7 +114,7 @@ And in `define-cn-time-stepping` we will implement the time-stepping loop that a
 ```{.typescript #define-cn-time-stepping filename="define-cn-time-stepping"}
 
 export const CNTimeStepping = (
-    concentrationData: Float64Array,
+    initialConcentration: Float64Array,
     totalNumberOfIterations: number,
 ): void => {
 
@@ -282,31 +282,26 @@ N = 6 // number of grid points, indices 0..5
 ```
 
 
-The domain is discretized on a uniform grid of `N` ($N$) points with spacing `dx` ($\Delta x$) and time step `dt` ($\Delta t$). The arrays `uCurrent` and `uNext` store the concentration at the current and next time steps, respectively. `uCurrent`
-stores $u_i^n$, which approximates $u(x_i, t^n)$, and `uNext` stores $u_i^{n+1}$, which approximates $u(x_i, t^{n+1})$. These variables and arrays are defined at module scope as
+The domain is discretized on a uniform grid of `N` ($N$) points with spacing $\Delta x$ and time step $\Delta t$. `N` is needed by both `CNSetup` and `CNTimeStepping`, so it is kept at module scope alongside the arrays `uCurrent` and `uNext`, which store the concentration at the current and next time steps, respectively. `uCurrent`
+stores $u_i^n$, which approximates $u(x_i, t^n)$, and `uNext` stores $u_i^{n+1}$, which approximates $u(x_i, t^{n+1})$. `dx` ($\Delta x$) and `dt` ($\Delta t$), on the other hand, are only needed while `CNSetup` precomputes coefficients, so they are declared as local values inside `CNSetup` instead of at module scope.
 
 ### Variable declaration
 
- These variables are declared in `define-global-variables`
+`N`, `uCurrent`, and `uNext` are declared in `define-global-variables`.
 
-```{.typescript #declare-grid-params-u filename="declare-grid-params-u"}
+```{.typescript #declare-concentration-arrays filename="declare-concentration-arrays"}
 let N: number;
-let dx: number;
-let dt: number;
 let uCurrent: Float64Array;
 let uNext: Float64Array;
 ```
 
-### Variable initialization 
+### Variable initialization
 
-The parameters values are initialized
-in `CNSetup` from its parameters `length`, `deltaX`, and `deltaT`)
+`N` is initialized in `CNSetup` from its parameter `numberOfGridPoints`.
 
 
 ```{.typescript #assign-grid-params filename="assign-grid-params" }
-N = length;
-dx = deltaX;
-dt = deltaT;
+N = numberOfGridPoints;
 ```
 and the arrays are allocated in `CNSetup` using the grid size `N`.
 
@@ -818,7 +813,7 @@ We collect all the module‑level variables in the first part of the module toge
 
 ```{.typescript #define-global-variables filename="define-global-variables"}
 import { thomasAlgorithm } from "./thomasAlgorithm.js";
-<<declare-grid-params-u>>
+<<declare-concentration-arrays>>
 <<declare-lambda-q-beta>>
 <<declare-diagonals>>
 <<declare-thomas-scratch-arrays>>
@@ -831,7 +826,7 @@ We want to rebuild all the $N$-long arrays only when the grid size `N` changes, 
 
 ```{.typescript #define-setup-logic filename=define-setup-logic}
 
-const NChanged: boolean = N !== length;
+const NChanged: boolean = N !== numberOfGridPoints;
 
 <<assign-grid-params>>
 <<compute-lambda>>
@@ -853,7 +848,7 @@ if (NChanged) {
 
 ## The time‑stepping loop
 
-We first need to copy the array of concentrations given by the caller into `uCurrent`, then iterate for the requested number of steps. And finally, write the result back into the provided `concentrationData` array.
+We first need to copy the array of concentrations given by the caller into `uCurrent`, then iterate for the requested number of steps. And finally, write the result back into the provided `initialConcentration` array.
 
 
 ```{.typescript #define-time-stepping-logic filename="define-time-stepping-logic"}
@@ -893,13 +888,13 @@ We first need to copy the array of concentrations given by the caller into `uCur
 
 ```{.typescript #receive-initial-concentration filename="receive-initial-concentration"}
 for (let i: number = 0; i < N; i++) {
-        uCurrent[i] = concentrationData[i];
+        uCurrent[i] = initialConcentration[i];
     }
 ```
 
 ```{.typescript #return-final-concentration filename="return-final-concentration"}
     for (let i: number = 0; i < N; i++) {
-        concentrationData[i] = uCurrent[i];
+        initialConcentration[i] = uCurrent[i];
     }
 ```
 ```{.typescript #check-for-negative-concentration filename="check-for-negative-concentration"}
