@@ -1,4 +1,4 @@
-# Crank--Nicolson Method
+# Crank--Nicolson Method 
 
 ## Biological problem
 
@@ -28,7 +28,7 @@ D \frac{\partial^2 u}{\partial x^2}
 +
 O(x)
 -
-I(x,u,t).
+I(x)\,u.
 $$ {#eq-diffusion-source-sink}
 
 Here,
@@ -39,25 +39,27 @@ Here,
 | $\frac{\partial^2 u}{\partial x^2}$ | Second spatial derivative | $M/L^{d+2}$ |
 | $D$ | Diffusion coefficient | $L^2/T$ |
 | $O(x)$ | Source term (production of $u$) | $M/(L^d\,T)$ |
-| $I(x,u,t)$ | Sink term (uptake of $u$) | $M/(L^d\,T)$ |
+| $I(x)$ | per-agent uptake rate coefficient | $1/T$ |
 
-Let $B_o$ denote the set of secreting agents and $B_i$ the set of consuming agents and let $x_s$ be the position of agent $s$; the agents are then represented as point-like sources and sinks using Dirac delta functions
+Let $B_o$ denote the set of secreting agents and $B_i$ the set of consuming agents and let $x_s$ be the position of agent $s$; the agents are then represented as a point-like source rate $O(x)$ and a point-like per-agent uptake rate $I(x)$ using Dirac delta functions
 
 $$
 O(x)
 =
 K_O
 \sum_{s\in B_o}
-\delta(x-x_s), 
+\delta(x-x_s),
 $$
 
 $$
-I(x,u,t)
+I(x)
 =
-K_I\,u(x,t)
+K_I
 \sum_{s\in B_i}
 \delta(x-x_s).
 $$
+
+where,
 
 | Symbol | Description | Units |
 |---|---|---|
@@ -211,11 +213,12 @@ drawGrid = (N) => {
 schematicN6 = drawGrid(6) // number of grid points, indices 0..5
 ```
 
-### space and time discretization
+### Space and time discretization
 
 The domain is discretized on a uniform grid of `N` ($N$) points with spacing `dx` $\Delta x$ and time step `dt` $\Delta t$. The  array `u`
-stores $u_i^n$, which approximates $u(x_i, t^n)$. Of these four parameters, the only one that will be stored as a global will be `N`, since it will  be used in all parts of the module, includding the hot-code inside  the time stepping loop in @lst-define-cn-time-stepping. On the other hand, `dx` and `dt` will only  be used to calculate nondimentional diffusion parameters and reaction terms (see @lst-define-cn-set-parameters)
+stores $u_i^n$, which approximates $u(x_i, t^n)$. 
 
+Of these four parameters, the only one that will be stored as a global will be `N`, since it will  be used in all parts of the module.
 
 `N` is declared as
 
@@ -223,7 +226,7 @@ stores $u_i^n$, which approximates $u(x_i, t^n)$. Of these four parameters, the 
 let N: number;
 ```
 
-together with other global variables in @lst-define-global-variables. `N` is initialized by calling the  function `CNSetSize(N)` with the desired number of grid points (see @lst-define-cn-set-size), which also allocates all arrays that deppend on  grid size.
+together with other global variables in @lst-define-global-variables. `N` is initialized by calling the  function `CNSetSize(N)` in @lst-define-cn-set-size with the desired number of grid points.
 
 
 ```{.typescript #lst-assign-N lst-cap="lst-assign-N" }
@@ -258,6 +261,7 @@ $$
 m_i^{(O)} = \sum_{s\in B_o} \delta_{i,i_s}, \qquad
 m_i^{(I)} = \sum_{s\in B_i} \delta_{i,i_s},
 $$ {#eq-agents-counts}
+
 Here,  $\delta_{i,i_s}$ is the Kronecker delta, which is dimensionless (unlike the Dirac delta $\delta(x)$ used in the continuous case, which has units of $1/L^d$).
 
 Then, the source and sink terms can be discretized as
@@ -271,16 +275,25 @@ $$ {#eq-source-discrete}
 
 
 $$
-I_i^n
+I_i
 =
 \frac{K_I}{\Delta x}
-u_i^n
 m_i^{(I)}
 $$ {#eq-sink-discrete}
 
-The factor $1/\Delta x$ represents each point-like agent as a source or sink distributed over its assigned grid cell. Consequently, integrating the discrete source or sink over that cell recovers the secretion or uptake associated with that agent. 
+The factor $1/\Delta x$ represents each point-like agent as a source or sink distributed over its assigned grid cell. Consequently, integrating the discrete source or sink over that cell recovers the secretion or uptake associated with that agent.
 
-The arrays $m^{(I)}$ and $m^{(O)}$ are called `sinks` and `sources` and are passed as arguments to the  function `CNSetParameters()` in @lst-define-cn-set-parameters
+In  the typescript implementation the arrays $m^{(I)}$ and $m^{(O)}$ are called `sinks` and `sources`:
+
+```{.typescript #lst-define-O-I lst-cap="lst-define-O-I"}
+const O_i = (K_O / dx) * sources[i];
+const I_i = (K_I / dx) * sinks[i];
+```
+
+
+## Input parameters
+
+The following parameters are provided by  the  caller throug the function `CNSetParameters()`:
 
 ```{.typescript #lst-define-cn-set-parameters lst-cap="lst-define-cn-set-parameters"}
 
@@ -299,17 +312,31 @@ export const CNSetParameters = (
   <<lst-fill-q-beta>>
   <<lst-fill-diagonals>>
 
+};
+```
+
+
+In @lst-define-cn-set-parameters we precompute coefficients and fill the diagonals.
+
+```{.typescript #lst-define-cn-set-size lst-cap="lst-define-cn-set-size"}
+
+export const CNSetSize = (
+    numberOfGridPoints: number,
+): void => {
+
+  <<lst-assign-N>>
+  <<lst-alloc-q-beta>>
+  <<lst-alloc-diagonals>>
+  <<lst-alloc-thomas-scratch-arrays>>
 
 };
 ```
 
 
 
-
-
 ## Crank--Nicolson scheme 
 
-Using the Crank--Nicolson method, the diffusion and uptake terms are averaged between time levels $n$ and $n+1$. Since the secretion term is assumed constant in time, it is included directly:
+Using the Crank--Nicolson method, the diffusion term is averaged between time levels $n$ and $n+1$. The source rate $O_i$ and the per-agent uptake rate $I_i$ are both constant in time (they depend only on the fixed agent positions and counts), so $O_i$ is included directly and only the concentration $u$ multiplying $I_i$ needs to be averaged between time levels:
 
 $$
 \frac{u_i^{n+1} - u_i^n}{\Delta t}
@@ -321,13 +348,13 @@ $$
 +
 O_i
 -
-\frac{1}{2}
+\frac{I_i}{2}
 \left[
-I_i^{n+1} + I_i^n
+u_i^{n+1} + u_i^n
 \right].
 $${#eq-crank-nicolson}
 
-Inserting the explicit forms of the discrete Laplacian, source term and sink term (@eq-laplacian, @eq-source-discrete, @eq-sink-discrete) into
+Inserting the explicit form of the discrete Laplacian (@eq-laplacian) into
 @eq-crank-nicolson and multiplying by $\Delta t$, we arrive at the linear system
 
 
@@ -346,12 +373,10 @@ u_i^{n+1} - u_i^n
 \Bigr]
 \\
 &+
-\frac{K_O \Delta t}{\Delta x}
-m_i^{(O)}
+O_i \Delta t
 \\
 &-
-\frac{K_I \Delta t}{2\Delta x}
-m_i^{(I)}
+\frac{I_i \Delta t}{2}
 \Bigl[
     u_i^n + u_i^{n+1}
 \Bigr]
@@ -367,14 +392,15 @@ $$
 \frac{D \Delta t}{2\Delta x^2}
 \qquad
 q_i=
-\frac{K_O \Delta t}{\Delta x}m_i^{(O)},
+O_i\,\Delta t,
 \qquad
 \beta_i
 =
-\frac{K_I \Delta t}{2\Delta x}m_i^{(I)}
+\frac{I_i\,\Delta t}{2}
 $$
 
-### Parameter declaration
+That is, $q_i$ is the discrete source rate $O_i$ (@eq-source-discrete) scaled by the time step, and $\beta_i$ the discrete per-agent uptake rate $I_i$ (@eq-sink-discrete) scaled by half the time step.
+
 
 $\lambda$, $q$, and $\beta$ are declared as
 
@@ -385,7 +411,6 @@ let beta: Float64Array;
 ```
  in @lst-define-global-variables
 
-### Parameter initialization
 
 The arrays `q` and `beta` are allocated with size `N` by `CNSetSize(N)`:
 
@@ -402,12 +427,13 @@ The parameters `lambda`, `q`, and `beta` are then computed by `CNSetParameters()
 lambda = (D * dt) / (2.0 * dx * dx);
 ```
 
-and the arrays `q` and `beta` are filled using the formulas for $q_i$ and $\beta_i$ derived above:
+and the arrays `q` and `beta` are filled by first computing $O_i$ and $I_i$ as in @eq-source-discrete and @eq-sink-discrete, then scaling them by $\Delta t$ and $\Delta t/2$ respectively to obtain $q_i$ and $\beta_i$:
 
 ```{.typescript #lst-fill-q-beta lst-cap="lst-fill-q-beta"}
 for (let i: number = 0; i < N; i++) {
-	q[i] = (K_O * dt) / dx * sources[i];
-	beta[i] = (K_I * dt) / (2.0 * dx) * sinks[i];
+  <<lst-define-O-I>>
+	q[i] = O_i * dt;
+	beta[i] = (I_i * dt) / 2.0;
 }
 ```
 
@@ -656,7 +682,6 @@ $$
 
 The matrix $A$ is built from the lower, main, and upper diagonals.
 
-### Diagonals declaration
  
 The three diagonals are declared in @lst-define-global-variables as
 
@@ -667,7 +692,6 @@ let mainDiagonal: Float64Array;
 let upperDiagonal: Float64Array;
 ```
 
-### Diagonals initialization
 
 The diagonals are allocated with size `N` by `CNSetSize(N)`:
 
@@ -759,22 +783,6 @@ The typescript file that implements this numerical method is organized into four
 
 ```
 
-In @lst-define-global-variables we define the arrays and variables that are shared across the whole module. In @lst-define-cn-set-size we allocate all arrays that deppend on grid size. In @lst-define-cn-set-parameters we precompute coefficients and fill the diagonals.
-
-```{.typescript #lst-define-cn-set-size lst-cap="lst-define-cn-set-size"}
-
-export const CNSetSize = (
-    numberOfGridPoints: number,
-): void => {
-
-  <<lst-assign-N>>
-  <<lst-alloc-q-beta>>
-  <<lst-alloc-diagonals>>
-  <<lst-alloc-thomas-scratch-arrays>>
-
-};
-```
-
 
 And in @lst-define-cn-time-stepping we will implement the time-stepping loop that advances the solution by solving the tridiagonal system at each step.
 
@@ -785,9 +793,21 @@ export const CNTimeStepping = (
     totalNumberOfIterations: number,
 ): void => {
 
+  for (let step: number = 0; step < totalNumberOfIterations; step++) {
 
-	<<lst-define-time-stepping-logic>>
+    <<lst-compute-rhs-vector>>
 
+    thomasAlgorithm(
+      lowerDiagonal,
+      mainDiagonal,
+      upperDiagonal,
+      d,
+      N,
+      modifiedUpper,
+      u,
+    );
+
+  }
 
 };
 ```
@@ -837,35 +857,5 @@ import { thomasAlgorithm } from "./thomasAlgorithm.js";
 
 
 
-
-## The time‑stepping loop
-
-We first need to copy the array of concentrations given by the caller into `u`, then iterate for the requested number of steps. And finally, write the result back into the provided `concentration` array.
-
-
-```{.typescript #lst-define-time-stepping-logic lst-cap="lst-define-time-stepping-logic"}
-    
-
-
-for (let step: number = 0; step < totalNumberOfIterations; step++) {
-
-  <<lst-compute-rhs-vector>>
-
-  thomasAlgorithm(
-    lowerDiagonal,
-    mainDiagonal,
-    upperDiagonal,
-    d,
-    N,
-    modifiedUpper,
-    u,
-  );
-
-}
-
-
-
-
-```
 
 
