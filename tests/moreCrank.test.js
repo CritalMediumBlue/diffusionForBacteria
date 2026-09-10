@@ -1,4 +1,4 @@
-import { CNTimeStepping, CNSetup } from "../literate/src/index.js";
+import { CNTimeStepping, CNSetSize, CNSetParameters } from "../literate/src/index.js";
 import { expect, test } from "vitest";
 
 const length = 400;
@@ -17,7 +17,8 @@ test("zero iterations leaves the field unchanged", () => {
 	const K_I = k * deltaX;
 	const K_O = 0;
 
-	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CNSetSize(length);
+	CNSetParameters(D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts);
 	CNTimeStepping(u, 0);
 
 	for (let i = 0; i < length; i++) {
@@ -36,7 +37,8 @@ test("uniform field with no source/decay stays constant", () => {
 	const K_I = k * deltaX;
 	const K_O = 0;
 
-	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CNSetSize(length);
+	CNSetParameters(D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts);
 	CNTimeStepping(u, 500);
 
 	for (let i = 0; i < length; i++) {
@@ -57,7 +59,8 @@ test("uniform field decays exponentially, independent of D", () => {
 	const K_I = k * deltaX;
 	const K_O = 0;
 
-	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CNSetSize(length);
+	CNSetParameters(D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts);
 	CNTimeStepping(u, iterations);
 
 	const expected = C * Math.exp(-k * totalTime);
@@ -82,7 +85,8 @@ test("uniform field decays exponentially, independent of D", () => {
 		const K_I = k * deltaX;
 		const K_O = 0;
 
-		CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+		CNSetSize(length);
+	CNSetParameters(D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts);
 		CNTimeStepping(u, iterations);
 
 		const lambda = k + D * Math.pow((n * Math.PI) / L, 2);
@@ -109,7 +113,8 @@ test("total mass is conserved with reflective BC (no source/decay)", () => {
 
 	const massBefore = u.reduce((a, b) => a + b, 0) * deltaX;
 
-	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CNSetSize(length);
+	CNSetParameters(D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts);
 	CNTimeStepping(u, 2000);
 
 	const massAfter = u.reduce((a, b) => a + b, 0) * deltaX;
@@ -131,7 +136,8 @@ test("mass grows linearly with constant source under reflective BC", () => {
 	const K_O = S0 * deltaX;
 	const massBefore = u.reduce((a, b) => a + b, 0) * deltaX;
 
-	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CNSetSize(length);
+	CNSetParameters(D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts);
 	CNTimeStepping(u, iterations);
 
 	const massAfter = u.reduce((a, b) => a + b, 0) * deltaX;
@@ -150,7 +156,8 @@ test("converges to uniform steady state S0/k with constant source and decay", ()
 	const K_I = k * deltaX;
 	const K_O = S0 * deltaX;
 
-	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CNSetSize(length);
+	CNSetParameters(D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts);
 	CNTimeStepping(u, 20000); // run long enough to reach steady state
 
 	const expected = S0 / k;
@@ -170,7 +177,8 @@ test("symmetric initial condition remains symmetric in time", () => {
 	const K_I = k * deltaX;
 	const K_O = 0;
 
-	CNSetup(length, D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts, true);
+	CNSetSize(length);
+	CNSetParameters(D, deltaX, dt, K_I, K_O, sinkCounts, sourceCounts);
 	CNTimeStepping(u, 500);
 
 	for (let i = 0; i < length; i++) {

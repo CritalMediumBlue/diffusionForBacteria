@@ -41,12 +41,7 @@ Here,
 | $O(x)$ | Source term (production of $u$) | $M/(L^d\,T)$ |
 | $I(x,u,t)$ | Sink term (uptake of $u$) | $M/(L^d\,T)$ |
 
-
-## Point-like sources and sinks
-
-Let $B_o$ denote the set of secreting agents and $B_i$ the set of consuming agents. Let $x_s$ be the position of agent $s$.
-
-The agents are represented as point-like sources and sinks using Dirac delta functions
+Let $B_o$ denote the set of secreting agents and $B_i$ the set of consuming agents and let $x_s$ be the position of agent $s$; the agents are then represented as point-like sources and sinks using Dirac delta functions
 
 $$
 O(x)
@@ -63,74 +58,15 @@ K_I\,u(x,t)
 \sum_{s\in B_i}
 \delta(x-x_s).
 $$
-$K_O$ is the **per-agent secretion rate** or **point-source strength**. It specifies the amount of substance secreted by one agent per unit time. All secreting agents are assumed to have the same $K_O$, with units of $M/T$. This is an intrinsic bacterial property independent of the geometry of space.
 
-$K_I$ is the **per-agent first-order uptake coefficient**. The uptake rate of a consuming agent is proportional to the local extracellular concentration. All consuming agents are assumed to have the same $K_I$. Unlike $K_O$, the units of $K_I$ depend on the spatial dimension $d$: $K_I$ carries units of $L^d / T$, because the Dirac delta function $\delta(x)$ has units of $1/L^d$ and the sink term $I = K_I\, u\, \delta$ must have units of $M/(L^d\, T)$. In one spatial dimension $(d=1)$, $K_I$ therefore has units of $L/T$.
-
-
-
-## Module structure
-
-The typescript file that implements this numerical method is organized into three main sections: @lst-define-global-variables, @lst-define-cn-setup, and @lst-define-cn-time-stepping.
-
-
-```{.typescript file=src/crankNicolson.ts filename="src/crankNicolson.ts"}
-
-<<lst-define-global-variables>>
-
-<<lst-define-cn-setup>>
-
-<<lst-define-cn-time-stepping>>
-
-```
-
-In @lst-define-global-variables we will define the arrays and variables that are shared across the whole module. In @lst-define-cn-setup we will initialize the computational grid, precompute coefficients, and allocate the arrays needed for solving the linear system at each time step.
-
-
-```{.typescript #lst-define-cn-setup lst-cap="CN setup function"  filename="define-cn-setup"}
-
-export const CNSetup = (
-    numberOfGridPoints: number,
-    D: number,
-    dx: number,
-    dt: number,
-    K_I: number,
-    K_O: number,
-    sinkCounts: Float64Array,
-    sourceCounts: Float64Array,
-): void => {
+| Symbol | Description | Units |
+|---|---|---|
+| $K_O$ | Per-agent secretion rate (point-source strength) | $M/T$ |
+| $K_I$ | Per-agent first-order uptake coefficient | $L^d/T$ |
 
 
 
-	<<lst-define-setup-logic>>
-
-
-};
-```
-
-
-And in @lst-define-cn-time-stepping we will implement the time-stepping loop that advances the solution by solving the tridiagonal system at each step.
-
-```{.typescript #lst-define-cn-time-stepping lst-cap="CN time stepping function"  filename="define-cn-time-stepping"}
-
-export const CNTimeStepping = (
-    initialConcentration: Float64Array,
-    totalNumberOfIterations: number,
-): void => {
-
-
-	<<lst-define-time-stepping-logic>>
-
-
-};
-```
-
-
-
-
-
-
-## Space--Time Grid
+## Discretization
 
 
 
@@ -275,38 +211,27 @@ drawGrid = (N) => {
 schematicN6 = drawGrid(6) // number of grid points, indices 0..5
 ```
 
+### space and time discretization
 
-The domain is discretized on a uniform grid of `N` ($N$) points with spacing $\Delta x$ and time step $\Delta t$. `N` is needed by both `CNSetup` and `CNTimeStepping`, so it is kept at module scope alongside the arrays `uCurrent` and `uNext`, which store the concentration at the current and next time steps, respectively. `uCurrent`
-stores $u_i^n$, which approximates $u(x_i, t^n)$, and `uNext` stores $u_i^{n+1}$, which approximates $u(x_i, t^{n+1})$. `dx` ($\Delta x$) and `dt` ($\Delta t$), on the other hand, are only needed while `CNSetup` precomputes coefficients, so they are declared as local values inside `CNSetup` instead of at module scope.
+The domain is discretized on a uniform grid of `N` ($N$) points with spacing `dx` $\Delta x$ and time step `dt` $\Delta t$. The  array `u`
+stores $u_i^n$, which approximates $u(x_i, t^n)$. Of these four parameters, the only one that will be stored as a global will be `N`, since it will  be used in all parts of the module, includding the hot-code inside  the time stepping loop in @lst-define-cn-time-stepping. On the other hand, `dx` and `dt` will only  be used to calculate nondimentional diffusion parameters and reaction terms (see @lst-define-cn-set-parameters)
 
-### Variable declaration
 
-`N`, `uCurrent`, and `uNext` are declared in @lst-define-global-variables.
+`N` is declared as
 
-```{.typescript #lst-declare-concentration-arrays lst-cap="concentration array declarations"  filename="declare-concentration-arrays"}
+```{.typescript #lst-declare-N lst-cap="lst-declare-N"}
 let N: number;
-let uCurrent: Float64Array;
-let uNext: Float64Array;
 ```
 
-### Variable initialization
-
-`N` is initialized in `CNSetup` from its parameter `numberOfGridPoints`.
+together with other global variables in @lst-define-global-variables. `N` is initialized by calling the  function `CNSetSize(N)` with the desired number of grid points (see @lst-define-cn-set-size), which also allocates all arrays that deppend on  grid size.
 
 
-```{.typescript #lst-assign-grid-params lst-cap="grid parameter assignment"  filename="assign-grid-params" }
-N = numberOfGridPoints;
-```
-and the arrays are allocated in `CNSetup` using the grid size `N`.
-
-```{.typescript #lst-alloc-u lst-cap="allocation of concentration arrays"  filename="alloc-u"}
-uCurrent = new Float64Array(N);
-uNext = new Float64Array(N);
+```{.typescript #lst-assign-N lst-cap="lst-assign-N" }
+N = numberOfGridPoints
 ```
 
 
 
-which `CNTimeStepping` can then use during time stepping.
 
 
 
@@ -314,9 +239,7 @@ which `CNTimeStepping` can then use during time stepping.
 
 
 
-
-
-## Discretization of the Laplacian and Source/Sink Terms
+### Laplacian  discretization
 
 
 The Laplacian is discretized as follows
@@ -327,6 +250,7 @@ $$
 \frac{u_{i-1}^n - 2u_i^n + u_{i+1}^n}{\Delta x^2}.
 $$ {#eq-laplacian}
 
+### Sinks and sources discretization
 
 Let $m_i^{(O)}$ and $m_i^{(I)}$ denote the number of secreting and consuming agents in grid cell $i$, and let $i_s$ be the grid index of the cell to which agent $s$ is assigned (for example, the nearest grid cell). Then
 
@@ -355,6 +279,33 @@ m_i^{(I)}
 $$ {#eq-sink-discrete}
 
 The factor $1/\Delta x$ represents each point-like agent as a source or sink distributed over its assigned grid cell. Consequently, integrating the discrete source or sink over that cell recovers the secretion or uptake associated with that agent. 
+
+The arrays $m^{(I)}$ and $m^{(O)}$ are called `sinks` and `sources` and are passed as arguments to the  function `CNSetParameters()` in @lst-define-cn-set-parameters
+
+```{.typescript #lst-define-cn-set-parameters lst-cap="lst-define-cn-set-parameters"}
+
+export const CNSetParameters = (
+    D: number,
+    dx: number,
+    dt: number,
+    K_I: number,
+    K_O: number,
+    sinks: Float64Array,
+    sources: Float64Array,
+): void => {
+
+  	
+  <<lst-compute-lambda>>
+  <<lst-fill-q-beta>>
+  <<lst-fill-diagonals>>
+
+
+};
+```
+
+
+
+
 
 ## Crank--Nicolson scheme 
 
@@ -425,39 +376,42 @@ $$
 
 ### Parameter declaration
 
-$\lambda$, $q$, and $\beta$ are declared in @lst-define-global-variables
+$\lambda$, $q$, and $\beta$ are declared as
 
-```{.typescript #lst-declare-lambda-q-beta lst-cap="lambda, q, beta declarations"  filename="declare-lambda-q-beta"}
+```{.typescript #lst-declare-lambda-q-beta lst-cap="lst-declare-lambda-q-beta"}
 let lambda: number;  
 let q: Float64Array;
 let beta: Float64Array;
 ```
+ in @lst-define-global-variables
 
 ### Parameter initialization
 
-Lambda is computed in `CNSetup` as
+The arrays `q` and `beta` are allocated with size `N` by `CNSetSize(N)`:
 
-```{.typescript #lst-compute-lambda lst-cap="compute lambda"  filename="compute-lambda"}
-lambda = (D * dt) / (2.0 * dx * dx);
-```
-
-and the arrays `q` and `beta` are allocated with size `N` in `CNSetup` as well 
-
-```{.typescript #lst-alloc-q-beta lst-cap="allocation of q and beta arrays"  filename="alloc-q-beta"}
+```{.typescript #lst-alloc-q-beta lst-cap="lst-alloc-q-beta"}
 q = new Float64Array(N);
 beta = new Float64Array(N);
 ```
 
-and filled using the formulas for $q_i$ and $\beta_i$ derived above.
+The parameters `lambda`, `q`, and `beta` are then computed by `CNSetParameters()`.
 
-```{.typescript #lst-fill-q-beta lst-cap="fill q and beta arrays"  filename="fill-q-beta"}
+`lambda` is computed as
+
+```{.typescript #lst-compute-lambda lst-cap="lst-compute-lambda"}
+lambda = (D * dt) / (2.0 * dx * dx);
+```
+
+and the arrays `q` and `beta` are filled using the formulas for $q_i$ and $\beta_i$ derived above:
+
+```{.typescript #lst-fill-q-beta lst-cap="lst-fill-q-beta"}
 for (let i: number = 0; i < N; i++) {
-	q[i] = (K_O * dt) / dx * sourceCounts[i];
-	beta[i] = (K_I * dt) / (2.0 * dx) * sinkCounts[i];
+	q[i] = (K_O * dt) / dx * sources[i];
+	beta[i] = (K_I * dt) / (2.0 * dx) * sinks[i];
 }
 ```
 
-where `D`, `K_O`, and `K_I` are coefficients passed as a parameter to `CNSetup`; and `sourceCounts` and `sinkCounts` are arrays of length `N` passed as parameters to `CNSetup` containing $m_i^{(O)}$ and $m_i^{(I)}$, respectively.
+where `D`, `K_O`, and `K_I` are coefficients passed as arguments to `CNSetParameters()`; and `sources` and `sinks` are arrays of length `N` passed as arguments to `CNSetParameters()` containing $m_i^{(O)}$ and $m_i^{(I)}$, respectively.
 
 
 ## Tridiagonal system
@@ -504,7 +458,13 @@ $$ {#eq-crank-nicolson-tridiagonal}
 
 
 
-This equation applies to every grid point $i=0,\ldots,N-1$, so that for a spatial domain with $N$ grid points, we obtain a system of $N$ linear equations. For a case with Neumann boundary conditions, the system can be written in matrix form as $A u^{n+1} = d$, where $A$ is the $N \times N$ tridiagonal matrix
+This equation applies to every grid point $i=0,\ldots,N-1$, so that for a spatial domain with $N$ grid points, we obtain a system of $N$ linear equations. For a case with Neumann boundary conditions, the system can be written in matrix form as 
+
+$$
+A u^{n+1} = d
+$$,
+
+where $A$ is the $N \times N$ tridiagonal matrix
 
 $$
 A =
@@ -543,8 +503,7 @@ d =
 \end{bmatrix}.
 $$
 
-Here, the entries of $A$ and $d$ at the boundaries $i=0$ and $i=N-1$ incorporate Neumann (zero-flux) boundary conditions.
-
+Here, the entries of $A$ and $d$ at the boundaries $i=0$ and $i=N-1$ incorporate Neumann (zero-flux) boundary conditions. The solution vector $u^{n+1}$ is solved from the system $A u^{n+1} = d$ using the Thomas algorithm, whose implementation lives in a separate module. 
 
 
 
@@ -692,9 +651,6 @@ $$
 
 :::
 
-
-The solution vector $u^{n+1}$ is solved from the system $A u^{n+1} = d$ using the Thomas algorithm, whose implementation lives in a separate module. 
-
 ## Building the tridiagonal matrix $A$
 
 
@@ -705,7 +661,7 @@ The matrix $A$ is built from the lower, main, and upper diagonals.
 The three diagonals are declared in @lst-define-global-variables as
 
 
-```{.typescript #lst-declare-diagonals lst-cap="diagonal array declarations"  filename="declare-diagonals"}
+```{.typescript #lst-declare-diagonals lst-cap="lst-declare-diagonals"}
 let lowerDiagonal: Float64Array;
 let mainDiagonal: Float64Array;
 let upperDiagonal: Float64Array;
@@ -713,30 +669,30 @@ let upperDiagonal: Float64Array;
 
 ### Diagonals initialization
 
-The diagonals are then initialized in `CNSetup` as
+The diagonals are allocated with size `N` by `CNSetSize(N)`:
 
-```{.typescript #lst-alloc-diagonals lst-cap="allocation of diagonal arrays"  filename="alloc-diagonals"}
+```{.typescript #lst-alloc-diagonals lst-cap="lst-alloc-diagonals"}
 lowerDiagonal = new Float64Array(N);
 mainDiagonal = new Float64Array(N);
 upperDiagonal = new Float64Array(N);
 ```
 
-and then filled with their corresponding parameters in 
+and then filled with their corresponding parameter values by `CNSetParameters()`:
 
-```{.typescript #lst-fill-diagonals lst-cap="fill diagonal arrays"  filename="fill-diagonals"}
-    for (let i: number = 1; i < N - 1; i++) {
-        lowerDiagonal[i] = -lambda;
-        mainDiagonal[i] = 1.0 + 2.0 * lambda + beta[i];
-        upperDiagonal[i] = -lambda;
-    }
+```{.typescript #lst-fill-diagonals lst-cap="lst-fill-diagonals"}
+for (let i: number = 1; i < N - 1; i++) {
+  lowerDiagonal[i] = -lambda;
+  mainDiagonal[i] = 1.0 + 2.0 * lambda + beta[i];
+  upperDiagonal[i] = -lambda;
+}
 
-    lowerDiagonal[0] = 0.0;
-    mainDiagonal[0] = 1.0 + 2.0 * lambda + beta[0];
-    upperDiagonal[0] = -2.0 * lambda;
+lowerDiagonal[0] = 0.0;
+mainDiagonal[0] = 1.0 + 2.0 * lambda + beta[0];
+upperDiagonal[0] = -2.0 * lambda;
 
-    lowerDiagonal[N - 1] = -2.0 * lambda;
-    mainDiagonal[N - 1] = 1.0 + 2.0 * lambda + beta[N - 1];
-    upperDiagonal[N - 1] = 0.0;
+lowerDiagonal[N - 1] = -2.0 * lambda;
+mainDiagonal[N - 1] = 1.0 + 2.0 * lambda + beta[N - 1];
+upperDiagonal[N - 1] = 0.0;
 
 ```
 
@@ -767,23 +723,78 @@ $$
 
 The ghost-cell mirroring is implemented directly in the code that builds $d$ at each time step inside @lst-define-cn-time-stepping
 
-```{.typescript #lst-compute-rhs-vector lst-cap="compute right-hand side vector"  filename="compute-rhs-vector"}
+```{.typescript #lst-compute-rhs-vector lst-cap="lst-compute-rhs-vector"}
 
 for (let i: number = 1; i < N - 1; i++) {
-	d[i] = lambda * uCurrent[i - 1] 
-		+ (1.0 - 2.0 * lambda - beta[i]) * uCurrent[i]  
-		+ lambda * uCurrent[i + 1] 
+	d[i] = lambda * u[i - 1] 
+		+ (1.0 - 2.0 * lambda - beta[i]) * u[i]  
+		+ lambda * u[i + 1] 
 		+ q[i];
 }
 
-d[0] = (1.0 - 2.0 * lambda - beta[0]) * uCurrent[0] 
-	+ 2.0 * lambda * uCurrent[1] 
+d[0] = (1.0 - 2.0 * lambda - beta[0]) * u[0] 
+	+ 2.0 * lambda * u[1] 
 	+ q[0];
 
-d[N - 1] = (1.0 - 2.0 * lambda - beta[N - 1]) * uCurrent[N - 1] 
-	+ 2.0 * lambda * uCurrent[N - 2]  
+d[N - 1] = (1.0 - 2.0 * lambda - beta[N - 1]) * u[N - 1] 
+	+ 2.0 * lambda * u[N - 2]  
 	+ q[N - 1];
 ```
+
+
+## Module structure
+
+The typescript file that implements this numerical method is organized into four main sections: @lst-define-global-variables, @lst-define-cn-set-size, @lst-define-cn-set-parameters, and @lst-define-cn-time-stepping.
+
+
+```{.typescript file=src/crankNicolson.ts filename="src/crankNicolson.ts"}
+
+<<lst-define-global-variables>>
+
+<<lst-define-cn-set-size>>
+
+<<lst-define-cn-set-parameters>>
+
+<<lst-define-cn-time-stepping>>
+
+```
+
+In @lst-define-global-variables we define the arrays and variables that are shared across the whole module. In @lst-define-cn-set-size we allocate all arrays that deppend on grid size. In @lst-define-cn-set-parameters we precompute coefficients and fill the diagonals.
+
+```{.typescript #lst-define-cn-set-size lst-cap="lst-define-cn-set-size"}
+
+export const CNSetSize = (
+    numberOfGridPoints: number,
+): void => {
+
+  <<lst-assign-N>>
+  <<lst-alloc-q-beta>>
+  <<lst-alloc-diagonals>>
+  <<lst-alloc-thomas-scratch-arrays>>
+
+};
+```
+
+
+And in @lst-define-cn-time-stepping we will implement the time-stepping loop that advances the solution by solving the tridiagonal system at each step.
+
+```{.typescript #lst-define-cn-time-stepping lst-cap="lst-define-cn-time-stepping"}
+
+export const CNTimeStepping = (
+    u: Float64Array,
+    totalNumberOfIterations: number,
+): void => {
+
+
+	<<lst-define-time-stepping-logic>>
+
+
+};
+```
+
+
+
+
 
 
 
@@ -796,16 +807,16 @@ The Thomas algorithm modifies the right‑hand side in place during forward elim
 
 They are declared at @lst-define-global-variables as
 
-```{.typescript #lst-declare-thomas-scratch-arrays lst-cap="Thomas scratch array declarations"  filename="declare-thomas-scratch-arrays"}
+```{.typescript #lst-declare-thomas-scratch-arrays lst-cap="lst-declare-thomas-scratch-arrays"}
 let modifiedUpper: Float64Array;
 let d: Float64Array;
 ```
 
 ### Scratch arrays allocation
 
-They are reallocated in `CNSetup` as
+They are allocated by `CNSetSize(N)` as
 
-```{.typescript #lst-alloc-thomas-scratch-arrays lst-cap="allocation of Thomas scratch arrays"  filename="alloc-thomas-scratch-arrays"}
+```{.typescript #lst-alloc-thomas-scratch-arrays lst-cap="lst-alloc-thomas-scratch-arrays"}
 modifiedUpper = new Float64Array(N);
 d = new Float64Array(N);
 ```
@@ -816,88 +827,45 @@ d = new Float64Array(N);
 We collect all the module‑level variables in the first part of the module together with the import of the Thomas algorithm
 
 
-```{.typescript #lst-define-global-variables lst-cap="global variables"  filename="lst-define-global-variables"}
+```{.typescript #lst-define-global-variables lst-cap="lst-define-global-variables"}
 import { thomasAlgorithm } from "./thomasAlgorithm.js";
-<<lst-declare-concentration-arrays>>
+<<lst-declare-N>>
 <<lst-declare-lambda-q-beta>>
 <<lst-declare-diagonals>>
 <<lst-declare-thomas-scratch-arrays>>
 ```
 
-## CN-setup logic
 
-We want to rebuild all the $N$-long arrays only when the grid size `N` changes, so we introduce a flag `NChanged` to detect this condition. This allows us to reuse existing arrays when only coefficients change but the grid size stays the same, avoiding unnecessary memory allocations.
-
-
-```{.typescript #lst-define-setup-logic lst-cap="CN setup logic"  filename=define-setup-logic}
-
-const NChanged: boolean = N !== numberOfGridPoints;
-
-<<lst-assign-grid-params>>
-<<lst-compute-lambda>>
-
-if (NChanged) {
-        <<lst-alloc-q-beta>>
-        <<lst-alloc-diagonals>>
-        <<lst-alloc-u>>
-        <<lst-alloc-thomas-scratch-arrays>>
-    }
-    <<lst-fill-q-beta>>
-    <<lst-fill-diagonals>>
-
-
-    
-
-```
 
 
 ## The time‑stepping loop
 
-We first need to copy the array of concentrations given by the caller into `uCurrent`, then iterate for the requested number of steps. And finally, write the result back into the provided `initialConcentration` array.
+We first need to copy the array of concentrations given by the caller into `u`, then iterate for the requested number of steps. And finally, write the result back into the provided `concentration` array.
 
 
-```{.typescript #lst-define-time-stepping-logic lst-cap="CN time stepping logic"  filename="define-time-stepping-logic"}
+```{.typescript #lst-define-time-stepping-logic lst-cap="lst-define-time-stepping-logic"}
     
 
-<<lst-receive-initial-concentration>>
 
-    for (let step: number = 0; step < totalNumberOfIterations; step++) {
+for (let step: number = 0; step < totalNumberOfIterations; step++) {
 
-        <<lst-compute-rhs-vector>>
+  <<lst-compute-rhs-vector>>
 
-        thomasAlgorithm(
-            lowerDiagonal,
-            mainDiagonal,
-            upperDiagonal,
-            d,
-            N,
-            modifiedUpper,
-            uNext,
-        );
+  thomasAlgorithm(
+    lowerDiagonal,
+    mainDiagonal,
+    upperDiagonal,
+    d,
+    N,
+    modifiedUpper,
+    u,
+  );
 
-        const tmp: Float64Array = uCurrent;
-        uCurrent = uNext;
-        uNext = tmp;
-    }
-
-
-<<lst-return-final-concentration>>
-
-
-```
+}
 
 
 
-```{.typescript #lst-receive-initial-concentration lst-cap="receive initial concentration"  filename="receive-initial-concentration"}
-for (let i: number = 0; i < N; i++) {
-        uCurrent[i] = initialConcentration[i];
-    }
-```
 
-```{.typescript #lst-return-final-concentration lst-cap="return final concentration"  filename="return-final-concentration"}
-    for (let i: number = 0; i < N; i++) {
-        initialConcentration[i] = uCurrent[i];
-    }
 ```
 
 

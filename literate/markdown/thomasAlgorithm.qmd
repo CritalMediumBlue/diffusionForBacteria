@@ -3,9 +3,8 @@
 The Thomas algorithm is a specialised form of Gaussian elimination that
 solves a tridiagonal system of linear equations in **O(n)** time. It is
 the workhorse behind the implicit steps in both the ADI and
-Crank‑Nicolson methods. Because the coefficient matrix is tridiagonal,
-the algorithm avoids the O(n³) cost of a general solver and requires
-only a few pre‑allocated work arrays.
+Crank‑Nicolson methods.
+
 
 ## The tridiagonal problem
 
@@ -17,7 +16,7 @@ $$ {#eq-thomas-system}
 
 with $a_0 = 0$ and $c_{n-1} = 0$, since $x_{-1}$ and $x_n$ do not exist.
 Here, $a_i$, $b_i$, and $c_i$ are the entries of the lower, main, and
-upper diagonals of the coefficient matrix, $d_i$ is the right-hand side,
+upper diagonals of the matrix, $d_i$ is the right-hand side,
 and $x_i$ is the unknown solution. These correspond directly to the
 function's parameters: `lowerDiagonal`, `mainDiagonal`, `upperDiagonal`,
 `rightHandSide`, and `solution`, respectively.
