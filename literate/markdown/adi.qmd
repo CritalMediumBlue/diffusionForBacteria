@@ -27,8 +27,8 @@ the pre‑computed constants `alpha`, `halfDeltaT`, `scaledSources`, and
 ```{.typescript #adi-variables}
 let WIDTH: number;
 let HEIGHT: number;
-let modifiedUpperDiagonal1: Float64Array, modifiedRightHandSide1: Float64Array, solution1: Float64Array;
-let modifiedUpperDiagonal2: Float64Array, modifiedRightHandSide2: Float64Array, solution2: Float64Array;
+let modifiedUpperDiagonal1: Float64Array, solution1: Float64Array;
+let modifiedUpperDiagonal2: Float64Array, solution2: Float64Array;
 let intermediateConcentration: Float64Array;
 let a1: Float64Array, b1: Float64Array, c1: Float64Array, d1: Float64Array;
 let a2: Float64Array, b2: Float64Array, c2: Float64Array, d2: Float64Array;
@@ -54,10 +54,8 @@ export const setADIProperties = (
     HEIGHT = height;
     ({
         modifiedUpperDiagonal1,
-        modifiedRightHandSide1,
         solution1,
         modifiedUpperDiagonal2,
-        modifiedRightHandSide2,
         solution2,
         intermediateConcentration,
         a1,
@@ -176,7 +174,6 @@ export const ADI = (
                 d1,
                 WIDTH,
                 modifiedUpperDiagonal1,
-                modifiedRightHandSide1,
                 solution1,
             );
 
@@ -216,7 +213,6 @@ export const ADI = (
                 d2,
                 HEIGHT,
                 modifiedUpperDiagonal2,
-                modifiedRightHandSide2,
                 solution2,
             );
 
@@ -282,10 +278,8 @@ export const initADIArrays = (
     deltaT: number,
 ): {
     modifiedUpperDiagonal1: Float64Array;
-    modifiedRightHandSide1: Float64Array;
     solution1: Float64Array;
     modifiedUpperDiagonal2: Float64Array;
-    modifiedRightHandSide2: Float64Array;
     solution2: Float64Array;
     intermediateConcentration: Float64Array;
     a1: Float64Array;
@@ -302,10 +296,8 @@ export const initADIArrays = (
     gamma: Float64Array;
 } => {
     const modifiedUpperDiagonal1: Float64Array = new Float64Array(WIDTH);
-    const modifiedRightHandSide1: Float64Array = new Float64Array(WIDTH);
     const solution1: Float64Array = new Float64Array(WIDTH);
     const modifiedUpperDiagonal2: Float64Array = new Float64Array(HEIGHT);
-    const modifiedRightHandSide2: Float64Array = new Float64Array(HEIGHT);
     const solution2: Float64Array = new Float64Array(HEIGHT);
     const intermediateConcentration: Float64Array = new Float64Array(WIDTH * HEIGHT);
     const scaledSources: Float64Array = new Float64Array(WIDTH * HEIGHT);
@@ -326,12 +318,10 @@ export const initADIArrays = (
         rightHandSide: d2,
     } = generateDiagonals(HEIGHT, alpha, gammaPoint);
     const halfDeltaT: number = deltaT / 2;
-    return {
+return {
         modifiedUpperDiagonal1,
-        modifiedRightHandSide1,
         solution1,
         modifiedUpperDiagonal2,
-        modifiedRightHandSide2,
         solution2,
         intermediateConcentration,
         a1,

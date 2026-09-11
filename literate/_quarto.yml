@@ -22,6 +22,7 @@ bibliography: markdown/references.bib
 
 format:
   html:
+    number-sections: true
     theme:
       - cosmo
       - brand

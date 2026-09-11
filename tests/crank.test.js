@@ -1,8 +1,9 @@
 import {
     ADI,
     setADIProperties,
-    CrankNicolson,
-    setCNProperties,
+    CNTimeStepping,
+    CNSetSize,
+    CNSetParameters,
     updateSinksAndSources,
 } from "../literate/src/index.js";
 import { expect, test } from "vitest";
@@ -24,11 +25,15 @@ testCases.forEach(({ diffusionCoefficient, decayRate, deltaX, totalTime }) => {
         const deltaT = 0.1;
         const totalIterations = Math.floor(totalTime / deltaT);
 
+        const sinkCounts = new Float64Array(length).fill(1);
+        const K_I = decayRate * deltaX;
+
         // Create fresh copies of sources for each test
-        const sources1D = new Float64Array(length).fill(0);
+        const sourceCounts1D = new Float64Array(length).fill(0);
         const sources2D = new Float64Array(length * height).fill(0);
         const sinks2D = new Float64Array(length * height).fill(decayRate);
-        sources1D[Math.floor(length / 2)] = 1.5; // point source in the center
+        sourceCounts1D[Math.floor(length / 2)] = 1; // point source in the center
+        const K_O = 1.5 * deltaX;
         for (let i = 0; i < height; i++) {
             sources2D[i * length + Math.floor(length / 2)] = 1.5;
         }
@@ -48,8 +53,9 @@ testCases.forEach(({ diffusionCoefficient, decayRate, deltaX, totalTime }) => {
 
         ADI(numericalSolutionUsingADI, totalIterations, true);
 
-        setCNProperties(length, diffusionCoefficient, deltaX, deltaT, decayRate);
-        CrankNicolson(numericalSolutionUsingCrankNicolson, sources1D, totalIterations, true);
+        CNSetSize(length);
+        CNSetParameters(diffusionCoefficient, deltaX, deltaT, K_I, K_O, sinkCounts, sourceCounts1D);
+        CNTimeStepping(numericalSolutionUsingCrankNicolson, totalIterations);
 
         for (let i = 0; i < length; i++) {
             const valueADI = numericalSolutionUsingADI[i + length]; // middle row
@@ -57,4 +63,35 @@ testCases.forEach(({ diffusionCoefficient, decayRate, deltaX, totalTime }) => {
             expect(valueCrankNicolson).toBeCloseTo(valueADI, 2);
         }
     });
+});
+
+test("Crank-Nicolson matches analytical decay of cos mode", () => {
+    const length = 1200,
+        deltaX = 1.0,
+        deltaT = 0.1;
+    const D = 2,
+        k = 0.01;
+    const q = Math.PI / length;
+    const totalTime = 50;
+    const totalIterations = Math.floor(totalTime / deltaT);
+
+    const u = new Float64Array(length);
+    for (let i = 0; i < length; i++) {
+        u[i] = 0.5 + 0.5 * Math.cos(q * i);
+    }
+    const sourceCounts = new Float64Array(length).fill(0);
+    const sinkCounts = new Float64Array(length).fill(1);
+    const K_I = k * deltaX;
+    const K_O = 0;
+
+    CNSetSize(length);
+    CNSetParameters(D, deltaX, deltaT, K_I, K_O, sinkCounts, sourceCounts);
+    CNTimeStepping(u, totalIterations);
+
+    for (let i = 0; i < length; i++) {
+        const exact =
+            0.5 * Math.exp(-k * totalTime) +
+            0.5 * Math.exp(-(D * q * q + k) * totalTime) * Math.cos(q * i);
+        expect(u[i]).toBeCloseTo(exact, 2);
+    }
 });
