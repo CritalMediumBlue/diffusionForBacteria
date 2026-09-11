@@ -4,7 +4,6 @@ import {
     analyticSteadyState,
     updateSinksAndSources,
     CNTimeStepping,
-    CNSetSize,
     CNSetParameters,
 } from "../literate/src/index.ts";
 import { describe, test, expect } from "vitest";
@@ -59,8 +58,7 @@ describe("Crank-Nicolson vs ADI Comparison", () => {
             initialConcentration[WIDTH * 4 + i] = initialConcentration[WIDTH * 0 + i]; // mirror
         }
         setADIProperties(WIDTH, HEIGHT, DIFFUSION_RATE, deltaX, deltaT);
-        CNSetSize(WIDTH);
-        CNSetParameters(DIFFUSION_RATE, deltaX, deltaT, K_I, K_O, sinkCounts, sourceCounts);
+        CNSetParameters(WIDTH, DIFFUSION_RATE, deltaX, deltaT, K_I, K_O, sinkCounts, sourceCounts);
 
         const numericalSolutionCrank = initialConcentration.slice(2 * WIDTH, 3 * WIDTH);
         const numericalSolutionADI = initialConcentration.slice();
@@ -240,8 +238,7 @@ describe("CrankNicolson vs Analitic Steady-State Solution", () => {
             sourceCounts[i] = sources1D[i] / K_O;
         }
 
-        CNSetSize(WIDTH);
-        CNSetParameters(DIFFUSION_RATE, deltaX, deltaT, K_I, K_O, sinkCounts, sourceCounts);
+        CNSetParameters(WIDTH, DIFFUSION_RATE, deltaX, deltaT, K_I, K_O, sinkCounts, sourceCounts);
 
         // Act - Compute analytical solution
         const analyticalSolution2D = analyticSteadyState(

@@ -8,7 +8,7 @@
 export { ADI, setADIProperties, updateSinksAndSources } from './adi.js';
 
 // Import and re-export Crank-Nicolson functions
-export { CNTimeStepping, CNSetSize, CNSetParameters } from './crankNicolson.js';
+export { CNTimeStepping, CNSetParameters } from './crankNicolson.js';
 
 // Import and re-export analytic solution
 export { analyticSteadyState } from './analyticSolution.js';

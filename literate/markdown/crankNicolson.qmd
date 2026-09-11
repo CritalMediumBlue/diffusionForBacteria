@@ -26,10 +26,10 @@ $$
 =
 D \frac{\partial^2 u}{\partial x^2}
 +
-O(x)
+o(x)
 -
-I(x)\,u.
-$$ {#eq-diffusion-source-sink}
+r(x)\,u.
+$$ {#eq-main}
 
 Here,
 
@@ -38,23 +38,23 @@ Here,
 | $u(x,t)$ | Extracellular concentration | $M/L^d$ |
 | $\frac{\partial^2 u}{\partial x^2}$ | Second spatial derivative | $M/L^{d+2}$ |
 | $D$ | Diffusion coefficient | $L^2/T$ |
-| $O(x)$ | Source term (production of $u$) | $M/(L^d\,T)$ |
-| $I(x)$ | per-agent uptake rate coefficient | $1/T$ |
+| $o(x)$ | Source term (production of $u$) | $M/(L^d\,T)$ |
+| $r(x)$ | per-agent uptake rate coefficient | $1/T$ |
 
-Let $B_o$ denote the set of secreting agents and $B_i$ the set of consuming agents and let $x_s$ be the position of agent $s$; the agents are then represented as a point-like source rate $O(x)$ and a point-like per-agent uptake rate $I(x)$ using Dirac delta functions
+Let $B_o$ denote the set of secreting agents and $B_i$ the set of consuming agents and let $x_s$ be the position of agent $s$; the agents are then represented as a point-like source rate $o(x)$ and a point-like per-agent uptake rate $r(x)$ using Dirac delta functions
 
 $$
-O(x)
+o(x)
 =
-K_O
+K_o
 \sum_{s\in B_o}
 \delta(x-x_s),
 $$
 
 $$
-I(x)
+r(x)
 =
-K_I
+K_r
 \sum_{s\in B_i}
 \delta(x-x_s).
 $$
@@ -63,13 +63,28 @@ where,
 
 | Symbol | Description | Units |
 |---|---|---|
-| $K_O$ | Per-agent secretion rate (point-source strength) | $M/T$ |
-| $K_I$ | Per-agent first-order uptake coefficient | $L^d/T$ |
+| $K_o$ | Per-agent secretion rate (point-source strength) | $M/T$ |
+| $K_r$ | Per-agent first-order uptake coefficient | $L^d/T$ |
+
+
+## Module structure
+
+We want to build a typescript module `crankNicolson.ts` that will numerically solve this equation. The module will consist of three major parts: @lst-global-variables, @lst-cn-set-parameters, and @lst-cn-time-stepping:
+
+```{.typescript #lst-crankNicolson lst-cap=lst-crankNicolson file=src/crankNicolson.ts filename="src/crankNicolson.ts"}
+
+<<lst-global-variables>>
+
+<<lst-cn-set-parameters>>
+
+<<lst-cn-time-stepping>>
+```
+
+This way, in @lst-global-variables we will store module-level variables and arrays that persist across time steps. In @lst-cn-set-parameters we will expose a function that someone can use to initiate the solver with their particular equation parameters and discretization grid or update the parameters that may change along the simulation. The time-stepping function will be in @lst-cn-time-stepping, this function will update the concentration by one or more time steps using the Thomas algorithm to solve the tridiagonal system.
 
 
 
-## Discretization
-
+## Discrete Approximation
 
 
 ```{ojs}
@@ -213,172 +228,183 @@ drawGrid = (N) => {
 schematicN6 = drawGrid(6) // number of grid points, indices 0..5
 ```
 
-### Space and time discretization
 
-The domain is discretized on a uniform grid of `N` ($N$) points with spacing `dx` $\Delta x$ and time step `dt` $\Delta t$. The  array `u`
-stores $u_i^n$, which approximates $u(x_i, t^n)$. 
-
-Of these four parameters, the only one that will be stored as a global will be `N`, since it will  be used in all parts of the module.
-
-`N` is declared as
-
-```{.typescript #lst-declare-N lst-cap="lst-declare-N"}
-let N: number;
-```
-
-together with other global variables in @lst-define-global-variables. `N` is initialized by calling the  function `CNSetSize(N)` in @lst-define-cn-set-size with the desired number of grid points.
-
-
-```{.typescript #lst-assign-N lst-cap="lst-assign-N" }
-N = numberOfGridPoints
-```
-
-
-
-
-
-
-
-
-
-
-### Laplacian  discretization
-
-
-The Laplacian is discretized as follows
+Discretize the 1D space by an uniform grid of length $N$ (`N`) with grid spacing $\Delta x$ (`dx`)
 
 $$
-\nabla^2(u_i^n)
-=
-\frac{u_{i-1}^n - 2u_i^n + u_{i+1}^n}{\Delta x^2}.
-$$ {#eq-laplacian}
+x_i = x_{\min} + i \Delta x \qquad i = 0, 1, \ldots, N-1,
+$$
 
-### Sinks and sources discretization
-
-Let $m_i^{(O)}$ and $m_i^{(I)}$ denote the number of secreting and consuming agents in grid cell $i$, and let $i_s$ be the grid index of the cell to which agent $s$ is assigned (for example, the nearest grid cell). Then
+and discretize time by time-steps of length $\Delta t$ (`dt`) 
 
 $$
-m_i^{(O)} = \sum_{s\in B_o} \delta_{i,i_s}, \qquad
-m_i^{(I)} = \sum_{s\in B_i} \delta_{i,i_s},
-$$ {#eq-agents-counts}
+t^n = n \Delta t,
+$$
 
-Here,  $\delta_{i,i_s}$ is the Kronecker delta, which is dimensionless (unlike the Dirac delta $\delta(x)$ used in the continuous case, which has units of $1/L^d$).
 
-Then, the source and sink terms can be discretized as
+then, the array `U` stores the values $U_i^n$ where
 
 $$
+u(x_i,t^n)\approx U_i^n 
+$$
+
+Approximate the Laplacian by
+
+$$
+\frac{\partial^2 u}{\partial x^2}\biggr|_{(x_i,t^n)}
+\approx 
+[\Delta U]_i^n
+:=
+\frac{U_{i-1}^n - 2U_i^n + U_{i+1}^n}{(\Delta x)^2}.
+$$ {#eq-discrete-laplacian}
+
+and approximate the time derivative at $(x_i,t^n)$ by
+
+
+$$
+\frac{\partial u}{\partial t}
+\biggr|_{(x_i,t^n)}
+\approx
+[D_t^+ U]_i^n
+:=
+\frac{U_i^{n+1} - U_i^n}{\Delta t}.
+$$ {#eq-forward-time-difference}
+
+The sources and sinks will be descretized as follows:
+$$
+o(x)
+\biggr|_{(x_i)}
+\approx
 O_i
 =
-\frac{K_O}{\Delta x}
-m_i^{(O)}
+\frac{K_o}{\Delta x}
+m_i^{o}
 $$ {#eq-source-discrete}
 
 
 $$
-I_i
+r(x)
+\biggr|_{(x_i)}
+\approx
+R_i
 =
-\frac{K_I}{\Delta x}
-m_i^{(I)}
+\frac{K_r}{\Delta x}
+m_i^{r}
 $$ {#eq-sink-discrete}
+
+
+```{.typescript #lst-compute-O-I lst-cap="lst-compute-O-I"}
+const O_i = (K_o / dx) * mo[i];
+const R_i = (K_r / dx) * mr[i];
+```
+
+where $m_i^{o}$ (`mo[i]`) and $m_i^{r}$ (`mr[i]`) denote the number of secreting and consuming agents in grid cell $i$, and let $i_s$ be the grid index of the cell to which agent $s$ is assigned (for example, the nearest grid cell)
+
+$$
+m_i^{o} = \sum_{s\in B_o} \delta_{i,i_s}, \qquad
+m_i^{r} = \sum_{s\in B_i} \delta_{i,i_s},
+$$ {#eq-agents-counts}
+
+Here,  $\delta_{i,i_s}$ is the Kronecker delta, which is dimensionless (unlike the Dirac delta $\delta(x)$ used in the continuous case, which has units of $1/L^d$).
+
+
+
 
 The factor $1/\Delta x$ represents each point-like agent as a source or sink distributed over its assigned grid cell. Consequently, integrating the discrete source or sink over that cell recovers the secretion or uptake associated with that agent.
 
-In  the typescript implementation the arrays $m^{(I)}$ and $m^{(O)}$ are called `sinks` and `sources`:
 
-```{.typescript #lst-define-O-I lst-cap="lst-define-O-I"}
-const O_i = (K_O / dx) * sources[i];
-const I_i = (K_I / dx) * sinks[i];
-```
+This way, we can write the discretized @eq-main at a particular grid cell $i$ and time step $n$ as
 
+$$
+[D_t^+U]_i^n = D [\Delta U]_i^n +O_i - R_i U
+$$
 
-## Input parameters
+## Setting parameters
 
-The following parameters are provided by  the  caller throug the function `CNSetParameters()`:
+All the parameters related to the discretization choices (`dx`, `dt`, and `N`), reaction rates (`K_o` and `K_r`) and diffusion rate  (`D`) will be defined in @lst-cn-set-parameters:
 
-```{.typescript #lst-define-cn-set-parameters lst-cap="lst-define-cn-set-parameters"}
+```{.typescript #lst-cn-set-parameters lst-cap="lst-define-cn-set-parameters"}
 
 export const CNSetParameters = (
+    numberOfGridPoints: number,
     D: number,
     dx: number,
     dt: number,
-    K_I: number,
-    K_O: number,
-    sinks: Float64Array,
-    sources: Float64Array,
+    K_r: number,
+    K_o: number,
+    mr: Float64Array,
+    mo: Float64Array,
 ): void => {
 
-  	
-  <<lst-compute-lambda>>
-  <<lst-fill-q-beta>>
-  <<lst-fill-diagonals>>
+	if (N !== numberOfGridPoints){
+
+		  N = numberOfGridPoints;
+
+		  <<lst-alloc-q-beta>>
+		  <<lst-alloc-diagonals>>
+		  <<lst-alloc-thomas-scratch-arrays>> 	
+	}
+
+	<<lst-compute-lambda>>
+	<<lst-fill-q-beta>>
+	<<lst-fill-diagonals>>
 
 };
 ```
 
+which is one of the three major parts of the module (see @lst-crankNicolson). Notice that in the function `CNSetParameters()` we allocate arrays only if the number of grid cells `N` has changed or has not yet been initialized. This allows to create new arrays only when needed. In case that the number of grid points does not change between calls, all the arrays used in this module will get reused. For this reason `N` will be declare as a global variable in @lst-global-variables
 
-In @lst-define-cn-set-parameters we precompute coefficients and fill the diagonals.
 
-```{.typescript #lst-define-cn-set-size lst-cap="lst-define-cn-set-size"}
 
-export const CNSetSize = (
-    numberOfGridPoints: number,
-): void => {
 
-  <<lst-assign-N>>
-  <<lst-alloc-q-beta>>
-  <<lst-alloc-diagonals>>
-  <<lst-alloc-thomas-scratch-arrays>>
-
-};
-```
 
 
 
 ## Crank--Nicolson scheme 
 
-Using the Crank--Nicolson method, the diffusion term is averaged between time levels $n$ and $n+1$. The source rate $O_i$ and the per-agent uptake rate $I_i$ are both constant in time (they depend only on the fixed agent positions and counts), so $O_i$ is included directly and only the concentration $u$ multiplying $I_i$ needs to be averaged between time levels:
+Using the Crank--Nicolson method, the diffusion and reaction is averaged between time levels $n$ and $n+1$. The source rate $O_i$ and the uptake rate $R_i$ are both constant along a single time step, so $O_i$ is included directly and only the concentration $u$ multiplying $R_i$ needs to be averaged between time levels:
+
 
 $$
-\frac{u_i^{n+1} - u_i^n}{\Delta t}
+[D_t^+ U]_i^n
 =
 \frac{D}{2}
-\left[
-\nabla^2(u_i^{n+1}) + \nabla^2(u_i^n)
-\right]
+\Bigl[
+[\Delta U]_i^{n+1}
 +
-O_i
--
-\frac{I_i}{2}
+[\Delta U]_i^{n}
+\Bigr] + O_i -
+\frac{R_i}{2}
 \left[
-u_i^{n+1} + u_i^n
-\right].
-$${#eq-crank-nicolson}
+U_i^{n+1} + U_i^n
+\right]
+$$ {#eq-crank-nicolson}
 
-Inserting the explicit form of the discrete Laplacian (@eq-laplacian) into
+Inserting @eq-discrete-laplacian and  @eq-forward-time-difference into
 @eq-crank-nicolson and multiplying by $\Delta t$, we arrive at the linear system
 
 
 $$
 \begin{aligned}
-u_i^{n+1} - u_i^n
+U_i^{n+1} - U_i^n
 ={}&
 \frac{D \Delta t}{2 \Delta x^2}
 \Bigl[
-    u_{i-1}^{n+1}
-    - 2u_i^{n+1}
-    + u_{i+1}^{n+1}
-    + u_{i-1}^{n}
-    - 2u_i^{n}
-    + u_{i+1}^{n}
+    U_{i-1}^{n+1}
+    - 2U_i^{n+1}
+    + U_{i+1}^{n+1}
+    + U_{i-1}^{n}
+    - 2U_i^{n}
+    + U_{i+1}^{n}
 \Bigr]
 \\
 &+
 O_i \Delta t
 \\
 &-
-\frac{I_i \Delta t}{2}
+\frac{R_i \Delta t}{2}
 \Bigl[
-    u_i^n + u_i^{n+1}
+    U_i^n + U_i^{n+1}
 \Bigr]
 \end{aligned}
 $$ {#eq-crank-nicolson-expanded}
@@ -396,88 +422,83 @@ O_i\,\Delta t,
 \qquad
 \beta_i
 =
-\frac{I_i\,\Delta t}{2}
+\frac{R_i\,\Delta t}{2}
 $$
 
-That is, $q_i$ is the discrete source rate $O_i$ (@eq-source-discrete) scaled by the time step, and $\beta_i$ the discrete per-agent uptake rate $I_i$ (@eq-sink-discrete) scaled by half the time step.
+so that the equation can be written as
 
 
-$\lambda$, $q$, and $\beta$ are declared as
+$$
+\begin{aligned}
+U_i^{n+1} - U_i^n
+={}&
+\lambda
+\Bigl[
+    U_{i-1}^{n+1}
+    - 2U_i^{n+1}
+    + U_{i+1}^{n+1}
+    + U_{i-1}^{n}
+    - 2U_i^{n}
+    + U_{i+1}^{n}
+\Bigr]
+\\
+&+ q_i \\
+&-\beta_i
+\Bigl[
+    U_i^n + U_i^{n+1}
+\Bigr].
+\end{aligned}
+$${#eq-row-i}
+
+
+$\lambda$, $q$, and $\beta$ are declared as global variables in @lst-global-variables as
 
 ```{.typescript #lst-declare-lambda-q-beta lst-cap="lst-declare-lambda-q-beta"}
 let lambda: number;  
 let q: Float64Array;
 let beta: Float64Array;
 ```
- in @lst-define-global-variables
 
 
-The arrays `q` and `beta` are allocated with size `N` by `CNSetSize(N)`:
+The arrays `q` and `beta` are allocated with size `N` at @lst-cn-set-parameters only when `N` is detected to be differenc between calls
 
 ```{.typescript #lst-alloc-q-beta lst-cap="lst-alloc-q-beta"}
 q = new Float64Array(N);
 beta = new Float64Array(N);
 ```
 
-The parameters `lambda`, `q`, and `beta` are then computed by `CNSetParameters()`.
-
-`lambda` is computed as
+The parameters `lambda` and the entries of `q`, and `beta` are then computed inside the same @lst-cn-set-parameters 
+as
 
 ```{.typescript #lst-compute-lambda lst-cap="lst-compute-lambda"}
 lambda = (D * dt) / (2.0 * dx * dx);
 ```
 
-and the arrays `q` and `beta` are filled by first computing $O_i$ and $I_i$ as in @eq-source-discrete and @eq-sink-discrete, then scaling them by $\Delta t$ and $\Delta t/2$ respectively to obtain $q_i$ and $\beta_i$:
+and the arrays `q` and `beta` as
 
 ```{.typescript #lst-fill-q-beta lst-cap="lst-fill-q-beta"}
 for (let i: number = 0; i < N; i++) {
-  <<lst-define-O-I>>
+  <<lst-compute-O-I>>
 	q[i] = O_i * dt;
-	beta[i] = (I_i * dt) / 2.0;
+	beta[i] = (R_i * dt) / 2.0;
 }
 ```
+Here we used the previusly computed `O_i` and `R_i` from @lst-compute-O-I
 
-where `D`, `K_O`, and `K_I` are coefficients passed as arguments to `CNSetParameters()`; and `sources` and `sinks` are arrays of length `N` passed as arguments to `CNSetParameters()` containing $m_i^{(O)}$ and $m_i^{(I)}$, respectively.
 
 
 ## Tridiagonal system
 
-Then @eq-crank-nicolson-expanded can be written as
+Collecting the unknown terms in @eq-row-i at time level $n+1$ on the left-hand side gives
 
 $$
-\begin{aligned}
-u_i^{n+1} - u_i^n
-={}&
-\lambda
-\Bigl[
-    u_{i-1}^{n+1}
-    - 2u_i^{n+1}
-    + u_{i+1}^{n+1}
-    + u_{i-1}^{n}
-    - 2u_i^{n}
-    + u_{i+1}^{n}
-\Bigr]
-\\
-&+
-q_i
--
-\beta_i
-\Bigl[
-    u_i^n + u_i^{n+1}
-\Bigr].
-\end{aligned}
-$$
-
-Collecting the unknown terms at time level $n+1$ on the left-hand side gives
-
-$$
-- \lambda u_{i-1}^{n+1}
-+ \left(1 + 2\lambda + \beta_i\right) u_i^{n+1}
-- \lambda u_{i+1}^{n+1}
+- \lambda U_{i-1}^{n+1}
++ \left(1 + 2\lambda + \beta_i\right) U_i^{n+1}
+- \lambda U_{i+1}^{n+1}
 =
- \lambda u_{i-1}^{n}
-+\left(1 - 2\lambda - \beta_i\right) u_i^n
-+\lambda u_{i+1}^{n}
+ \lambda U_{i-1}^{n}
++\left(1 - 2\lambda - \beta_i\right) U_i^n
++\lambda U_{i+1}^{n}
 +q_i.
 $$ {#eq-crank-nicolson-tridiagonal}
 
@@ -487,7 +508,7 @@ $$ {#eq-crank-nicolson-tridiagonal}
 This equation applies to every grid point $i=0,\ldots,N-1$, so that for a spatial domain with $N$ grid points, we obtain a system of $N$ linear equations. For a case with Neumann boundary conditions, the system can be written in matrix form as 
 
 $$
-A u^{n+1} = d
+A U^{n+1} = d
 $$,
 
 where $A$ is the $N \times N$ tridiagonal matrix
@@ -503,16 +524,16 @@ A =
 \end{bmatrix},
 $$
 
-$u^{n+1}$ is the unknown vector of concentrations at time level $n+1$,
+$U^{n+1}$ is the unknown vector of concentrations at time level $n+1$,
 
 $$
-u^{n+1} =
+U^{n+1} =
 \begin{bmatrix}
-u_0^{n+1} \\
-u_1^{n+1} \\
+U_0^{n+1} \\
+U_1^{n+1} \\
 \vdots \\
-u_{N-2}^{n+1} \\
-u_{N-1}^{n+1}
+U_{N-2}^{n+1} \\
+U_{N-1}^{n+1}
 \end{bmatrix},
 $$
 
@@ -521,15 +542,15 @@ and the right-hand side vector $d$ is given by
 $$
 d =
 \begin{bmatrix}
-\left(1 - 2\lambda - \beta_0\right) u_0^n + 2\lambda u_1^n + q_0 \\
-\lambda u_0^n + \left(1 - 2\lambda - \beta_1\right) u_1^n + \lambda u_2^n + q_1 \\
+\left(1 - 2\lambda - \beta_0\right) U_0^n + 2\lambda U_1^n + q_0 \\
+\lambda U_0^n + \left(1 - 2\lambda - \beta_1\right) U_1^n + \lambda U_2^n + q_1 \\
 \vdots \\
-\lambda u_{N-3}^n + \left(1 - 2\lambda - \beta_{N-2}\right) u_{N-2}^n + \lambda u_{N-1}^n + q_{N-2} \\
-2\lambda u_{N-2}^n + \left(1 - 2\lambda - \beta_{N-1}\right) u_{N-1}^n + q_{N-1}
+\lambda U_{N-3}^n + \left(1 - 2\lambda - \beta_{N-2}\right) U_{N-2}^n + \lambda U_{N-1}^n + q_{N-2} \\
+2\lambda U_{N-2}^n + \left(1 - 2\lambda - \beta_{N-1}\right) U_{N-1}^n + q_{N-1}
 \end{bmatrix}.
 $$
 
-Here, the entries of $A$ and $d$ at the boundaries $i=0$ and $i=N-1$ incorporate Neumann (zero-flux) boundary conditions. The solution vector $u^{n+1}$ is solved from the system $A u^{n+1} = d$ using the Thomas algorithm, whose implementation lives in a separate module. 
+Here, the entries of $A$ and $d$ at the boundaries $i=0$ and $i=N-1$ incorporate Neumann (zero-flux) boundary conditions. The solution vector $U^{n+1}$ is solved from the system $A U^{n+1} = d$ using the Thomas algorithm, whose implementation lives in a separate module. 
 
 
 
@@ -541,103 +562,103 @@ Here, the entries of $A$ and $d$ at the boundaries $i=0$ and $i=N-1$ incorporate
 schematicN5 = drawGrid(5)
 ```
 
-If we apply this equation to $5$ grid points ($i=0,1,2,3,4$), we obtain a system of $5$ linear equations for the unknowns $u_i^{n+1}$ 
+If we apply this equation to $5$ grid points ($i=0,1,2,3,4$), we obtain a system of $5$ linear equations for the unknowns $U_i^{n+1}$ 
 
 $$
 \begin{aligned}
--{\color{red} \lambda u_{-1}^{n+1}}
-+ \left(1 + 2\lambda + \beta_0\right) u_0^{n+1}
-- \lambda u_{1}^{n+1}
+-{\color{red} \lambda U_{-1}^{n+1}}
++ \left(1 + 2\lambda + \beta_0\right) U_0^{n+1}
+- \lambda U_{1}^{n+1}
 ={}&
-{\color{red} \lambda u_{-1}^{n}}
-+\left(1 - 2\lambda - \beta_0\right) u_0^n
-+\lambda u_{1}^{n}
+{\color{red} \lambda U_{-1}^{n}}
++\left(1 - 2\lambda - \beta_0\right) U_0^n
++\lambda U_{1}^{n}
 +q_0,
 \\
-- \lambda u_{0}^{n+1}
-+ \left(1 + 2\lambda + \beta_1\right) u_1^{n+1}
-- \lambda u_{2}^{n+1}
+- \lambda U_{0}^{n+1}
++ \left(1 + 2\lambda + \beta_1\right) U_1^{n+1}
+- \lambda U_{2}^{n+1}
 ={}&
- \lambda u_{0}^{n}
-+\left(1 - 2\lambda - \beta_1\right) u_1^n
-+\lambda u_{2}^{n}
+ \lambda U_{0}^{n}
++\left(1 - 2\lambda - \beta_1\right) U_1^n
++\lambda U_{2}^{n}
 +q_1,
 \\
-- \lambda u_{1}^{n+1}
-+ \left(1 + 2\lambda + \beta_2\right) u_2^{n+1}
-- \lambda u_{3}^{n+1}
+- \lambda U_{1}^{n+1}
++ \left(1 + 2\lambda + \beta_2\right) U_2^{n+1}
+- \lambda U_{3}^{n+1}
 ={}&
- \lambda u_{1}^{n}
-+\left(1 - 2\lambda - \beta_2\right) u_2^n
-+\lambda u_{3}^{n}
+ \lambda U_{1}^{n}
++\left(1 - 2\lambda - \beta_2\right) U_2^n
++\lambda U_{3}^{n}
 +q_2,
 \\
-- \lambda u_{2}^{n+1}
-+ \left(1 + 2\lambda + \beta_3\right) u_3^{n+1}
- - \lambda u_{4}^{n+1}
+- \lambda U_{2}^{n+1}
++ \left(1 + 2\lambda + \beta_3\right) U_3^{n+1}
+ - \lambda U_{4}^{n+1}
 ={}&
- \lambda u_{2}^{n}
-+\left(1 - 2\lambda - \beta_3\right) u_3^n
-+\lambda u_{4}^{n}
+ \lambda U_{2}^{n}
++\left(1 - 2\lambda - \beta_3\right) U_3^n
++\lambda U_{4}^{n}
 +q_3,
 \\
- - \lambda u_{3}^{n+1}
-+ \left(1 + 2\lambda + \beta_4\right) u_4^{n+1}
- - {\color{red} \lambda u_{5}^{n+1}}
+ - \lambda U_{3}^{n+1}
++ \left(1 + 2\lambda + \beta_4\right) U_4^{n+1}
+ - {\color{red} \lambda U_{5}^{n+1}}
 ={}&
- \lambda u_{3}^{n}
-+\left(1 - 2\lambda - \beta_4\right) u_4^n
-+{\color{red}\lambda u_{5}^{n}}
+ \lambda U_{3}^{n}
++\left(1 - 2\lambda - \beta_4\right) U_4^n
++{\color{red}\lambda U_{5}^{n}}
 +q_4.
 \end{aligned}
 $$
-Here, the red terms correspond to cells outside the domain which represent the boundary conditions. These are set to a constant value in the case of Dirichlet boundary conditions, or set via centered difference mirroring in the case of Neumann (zero-flux) boundary conditions. For this implementation, we use Neumann zero-flux boundary conditions. With centered differences, zero flux at the left boundary implies $u_{-1} = u_1$, and at the right boundary $u_{N} = u_{N-2}$. This way, by setting $u_{-1} = u_1$ and $u_5 = u_3$, we can eliminate the red terms, giving 
+Here, the red terms correspond to cells outside the domain which represent the boundary conditions. These are set to a constant value in the case of Dirichlet boundary conditions, or set via centered difference mirroring in the case of Neumann (zero-flux) boundary conditions. For this implementation, we use Neumann zero-flux boundary conditions. With centered differences, zero flux at the left boundary implies $U_{-1} = U_1$, and at the right boundary $U_{N} = U_{N-2}$. This way, by setting $U_{-1} = U_1$ and $U_5 = U_3$, we can eliminate the red terms, giving 
 
 $$
 \begin{aligned}
-\left(1 + 2\lambda + \beta_0\right) u_0^{n+1} - 2\lambda u_{1}^{n+1}
+\left(1 + 2\lambda + \beta_0\right) U_0^{n+1} - 2\lambda U_{1}^{n+1}
 ={}&
-\left(1 - 2\lambda - \beta_0\right) u_0^n
-+ 2\lambda u_{1}^{n}
+\left(1 - 2\lambda - \beta_0\right) U_0^n
++ 2\lambda U_{1}^{n}
 +q_0,
 \\
-- \lambda u_{0}^{n+1}
-+ \left(1 + 2\lambda + \beta_1\right) u_1^{n+1}
-- \lambda u_{2}^{n+1}
+- \lambda U_{0}^{n+1}
++ \left(1 + 2\lambda + \beta_1\right) U_1^{n+1}
+- \lambda U_{2}^{n+1}
 ={}&
- \lambda u_{0}^{n}
-+\left(1 - 2\lambda - \beta_1\right) u_1^n
-+\lambda u_{2}^{n}
+ \lambda U_{0}^{n}
++\left(1 - 2\lambda - \beta_1\right) U_1^n
++\lambda U_{2}^{n}
 +q_1,
 \\
-- \lambda u_{1}^{n+1}
-+ \left(1 + 2\lambda + \beta_2\right) u_2^{n+1}
-- \lambda u_{3}^{n+1}
+- \lambda U_{1}^{n+1}
++ \left(1 + 2\lambda + \beta_2\right) U_2^{n+1}
+- \lambda U_{3}^{n+1}
 ={}&
- \lambda u_{1}^{n}
-+\left(1 - 2\lambda - \beta_2\right) u_2^n
-+\lambda u_{3}^{n}
+ \lambda U_{1}^{n}
++\left(1 - 2\lambda - \beta_2\right) U_2^n
++\lambda U_{3}^{n}
 +q_2,
 \\
-- \lambda u_{2}^{n+1}
-+ \left(1 + 2\lambda + \beta_3\right) u_3^{n+1}
-- \lambda u_{4}^{n+1}
+- \lambda U_{2}^{n+1}
++ \left(1 + 2\lambda + \beta_3\right) U_3^{n+1}
+- \lambda U_{4}^{n+1}
 ={}&
- \lambda u_{2}^{n}
-+\left(1 - 2\lambda - \beta_3\right) u_3^n
-+\lambda u_{4}^{n}
+ \lambda U_{2}^{n}
++\left(1 - 2\lambda - \beta_3\right) U_3^n
++\lambda U_{4}^{n}
 +q_3,
 \\
-- 2\lambda u_{3}^{n+1}
-+ \left(1 + 2\lambda + \beta_4\right) u_4^{n+1}
+- 2\lambda U_{3}^{n+1}
++ \left(1 + 2\lambda + \beta_4\right) U_4^{n+1}
 ={}&
- 2\lambda u_{3}^{n}
-+\left(1 - 2\lambda - \beta_4\right) u_4^n
+ 2\lambda U_{3}^{n}
++\left(1 - 2\lambda - \beta_4\right) U_4^n
 +q_4.
 \end{aligned}
 $$
 
-This is a tridiagonal system that can be represented in matrix form as $A u^{n+1} = d$, where $A$ is
+This is a tridiagonal system that can be represented in matrix form as $A U^{n+1} = d$, where $A$ is
 
 $$
 A =
@@ -650,16 +671,16 @@ A =
 \end{bmatrix},
 $$
 
-$u^{n+1}$ is
+$U^{n+1}$ is
 
 $$
-u^{n+1} =
+U^{n+1} =
 \begin{bmatrix}
-u_0^{n+1} \\
-u_1^{n+1} \\
-u_2^{n+1} \\
-u_3^{n+1} \\
-u_4^{n+1}
+U_0^{n+1} \\
+U_1^{n+1} \\
+U_2^{n+1} \\
+U_3^{n+1} \\
+U_4^{n+1}
 \end{bmatrix}
 $$
 
@@ -667,11 +688,11 @@ and the right-hand side vector $d$ is
 $$
 d =
 \begin{bmatrix}
-\left(1 - 2\lambda - \beta_0\right) u_0^n + 2\lambda u_1^n + q_0 \\
-\lambda u_0^n + \left(1 - 2\lambda - \beta_1\right) u_1^n + \lambda u_2^n + q_1 \\
-\lambda u_1^n + \left(1 - 2\lambda - \beta_2\right) u_2^n + \lambda u_3^n + q_2 \\
-\lambda u_2^n + \left(1 - 2\lambda - \beta_3\right) u_3^n + \lambda u_4^n + q_3 \\
-2\lambda u_3^n + \left(1 - 2\lambda - \beta_4\right) u_4^n + q_4
+\left(1 - 2\lambda - \beta_0\right) U_0^n + 2\lambda U_1^n + q_0 \\
+\lambda U_0^n + \left(1 - 2\lambda - \beta_1\right) U_1^n + \lambda U_2^n + q_1 \\
+\lambda U_1^n + \left(1 - 2\lambda - \beta_2\right) U_2^n + \lambda U_3^n + q_2 \\
+\lambda U_2^n + \left(1 - 2\lambda - \beta_3\right) U_3^n + \lambda U_4^n + q_3 \\
+2\lambda U_3^n + \left(1 - 2\lambda - \beta_4\right) U_4^n + q_4
 \end{bmatrix}.
 $$
 
@@ -683,7 +704,7 @@ $$
 The matrix $A$ is built from the lower, main, and upper diagonals.
 
  
-The three diagonals are declared in @lst-define-global-variables as
+The three diagonals are declared in @lst-global-variables as
 
 
 ```{.typescript #lst-declare-diagonals lst-cap="lst-declare-diagonals"}
@@ -726,70 +747,57 @@ upperDiagonal[N - 1] = 0.0;
 The entries of the right-hand side vector $d$ is given by @eq-crank-nicolson-tridiagonal. For interior grid points $i = 1,\ldots,N-2$, each entry is
 
 $$
-d_i = \lambda u_{i-1}^n + (1 - 2\lambda - \beta_i) u_i^n + \lambda u_{i+1}^n + q_i.
+d_i = \lambda U_{i-1}^n + (1 - 2\lambda - \beta_i) U_i^n + \lambda U_{i+1}^n + q_i.
 $$
 
-To handle the Neumann (zero-flux) boundary conditions we use centered differences to mirror the ghost cells. At the left boundary ($i=0$), zero flux implies $u_{-1} = u_1$, giving
+To handle the Neumann (zero-flux) boundary conditions we use centered differences to mirror the ghost cells. At the left boundary ($i=0$), zero flux implies $U_{-1} = U_1$, giving
 
 $$
 \begin{aligned}
 d_0
-&= \lambda u_{-1}^n + (1 - 2\lambda - \beta_0) u_0^n + \lambda u_1^n + q_0 \\
-&= (1 - 2\lambda - \beta_0) u_0^n + 2\lambda u_1^n + q_0.
+&= \lambda U_{-1}^n + (1 - 2\lambda - \beta_0) U_0^n + \lambda U_1^n + q_0 \\
+&= (1 - 2\lambda - \beta_0) U_0^n + 2\lambda U_1^n + q_0.
 \end{aligned}
 $$
 
-Similarly, at the right boundary ($i=N-1$), $u_N = u_{N-2}$, so
+Similarly, at the right boundary ($i=N-1$), $U_N = U_{N-2}$, so
 
 $$
-d_{N-1} = (1 - 2\lambda - \beta_{N-1}) u_{N-1}^n+  2\lambda u_{N-2}^n + q_{N-1}.
+d_{N-1} = (1 - 2\lambda - \beta_{N-1}) U_{N-1}^n+  2\lambda U_{N-2}^n + q_{N-1}.
 $$
 
-The ghost-cell mirroring is implemented directly in the code that builds $d$ at each time step inside @lst-define-cn-time-stepping
+The ghost-cell mirroring is implemented directly in the code that builds $d$ at each time step inside @lst-cn-time-stepping
 
 ```{.typescript #lst-compute-rhs-vector lst-cap="lst-compute-rhs-vector"}
 
 for (let i: number = 1; i < N - 1; i++) {
-	d[i] = lambda * u[i - 1] 
-		+ (1.0 - 2.0 * lambda - beta[i]) * u[i]  
-		+ lambda * u[i + 1] 
+	d[i] = lambda * U[i - 1] 
+		+ (1.0 - 2.0 * lambda - beta[i]) * U[i]  
+		+ lambda * U[i + 1] 
 		+ q[i];
 }
 
-d[0] = (1.0 - 2.0 * lambda - beta[0]) * u[0] 
-	+ 2.0 * lambda * u[1] 
+d[0] = (1.0 - 2.0 * lambda - beta[0]) * U[0] 
+	+ 2.0 * lambda * U[1] 
 	+ q[0];
 
-d[N - 1] = (1.0 - 2.0 * lambda - beta[N - 1]) * u[N - 1] 
-	+ 2.0 * lambda * u[N - 2]  
+d[N - 1] = (1.0 - 2.0 * lambda - beta[N - 1]) * U[N - 1] 
+	+ 2.0 * lambda * U[N - 2]  
 	+ q[N - 1];
 ```
 
 
 ## Module structure
 
-The typescript file that implements this numerical method is organized into four main sections: @lst-define-global-variables, @lst-define-cn-set-size, @lst-define-cn-set-parameters, and @lst-define-cn-time-stepping.
+The typescript file that implements this numerical method is organized into four main sections: @lst-global-variables,, @lst-cn-set-parameters, and @lst-cn-time-stepping.
 
 
-```{.typescript file=src/crankNicolson.ts filename="src/crankNicolson.ts"}
+And in @lst-cn-time-stepping we will implement the time-stepping loop that advances the solution by solving the tridiagonal system at each step.
 
-<<lst-define-global-variables>>
-
-<<lst-define-cn-set-size>>
-
-<<lst-define-cn-set-parameters>>
-
-<<lst-define-cn-time-stepping>>
-
-```
-
-
-And in @lst-define-cn-time-stepping we will implement the time-stepping loop that advances the solution by solving the tridiagonal system at each step.
-
-```{.typescript #lst-define-cn-time-stepping lst-cap="lst-define-cn-time-stepping"}
+```{.typescript #lst-cn-time-stepping lst-cap="lst-define-cn-time-stepping"}
 
 export const CNTimeStepping = (
-    u: Float64Array,
+    U: Float64Array,
     totalNumberOfIterations: number,
 ): void => {
 
@@ -804,7 +812,7 @@ export const CNTimeStepping = (
       d,
       N,
       modifiedUpper,
-      u,
+      U,
     );
 
   }
@@ -815,6 +823,7 @@ export const CNTimeStepping = (
 
 
 
+ 
 
 
 
@@ -825,7 +834,7 @@ The Thomas algorithm modifies the right‑hand side in place during forward elim
 
 ### Scratch arrays declaration
 
-They are declared at @lst-define-global-variables as
+They are declared at @lst-global-variables as
 
 ```{.typescript #lst-declare-thomas-scratch-arrays lst-cap="lst-declare-thomas-scratch-arrays"}
 let modifiedUpper: Float64Array;
@@ -847,9 +856,11 @@ d = new Float64Array(N);
 We collect all the module‑level variables in the first part of the module together with the import of the Thomas algorithm
 
 
-```{.typescript #lst-define-global-variables lst-cap="lst-define-global-variables"}
+```{.typescript #lst-global-variables lst-cap="lst-global-variables"}
 import { thomasAlgorithm } from "./thomasAlgorithm.js";
-<<lst-declare-N>>
+
+let N: number;
+
 <<lst-declare-lambda-q-beta>>
 <<lst-declare-diagonals>>
 <<lst-declare-thomas-scratch-arrays>>
