@@ -1,25 +1,25 @@
-# Crank--Nicolson Method 
+# Crank--Nicolson Method
 
 ## Biological problem
 
-We consider a substance with concentration $u(x,t)$ that diffuses in one spatial dimension with a constant diffusion coefficient $D$. Point-like agents that act as sources and sinks in this one dimensional space. They may secrete the substance into the environment or remove it through uptake. These point-like agents might represent individual bacterium or discrete protein clusters positioned at specific locations along a filament or channel.
+We consider a substance with concentration $u(x,t)$ that diffuses in one spatial dimension with a constant diffusion coefficient $D$. There are point-like agents that act as sources and sinks in this one-dimensional space. They may secrete the substance into the environment or remove it through uptake. These point-like agents might represent individual bacteria or discrete protein clusters positioned at specific locations along a filament or channel.
 
 :::{.callout-note title="Dimensions and units"}
 
 We use the following dimensions and units:
 
 - $M$ denotes 'amount of substance' (e.g. units of moles, molecules, or mass).
-- $L$ denotes the length (e.g. µm), 
+- $L$ denotes the length (e.g. µm),
 - $T$ denotes time (e.g. seconds).
 
 Where dimension-generic expressions are given, $d$ denotes the number of spatial dimensions. For this document $d=1$.
 :::
 
- 
+
 
 ## Equation to solve
 
-The governing diffusion--reaction equation is
+We now formalize this biological scenario as a partial differential equation. The governing diffusion--reaction equation is
 
 $$
 \frac{\partial u}{\partial t}
@@ -41,7 +41,7 @@ Here,
 | $o(x)$ | Source term (production of $u$) | $M/(L^d\,T)$ |
 | $r(x)$ | per-agent uptake rate coefficient | $1/T$ |
 
-Let $B_o$ denote the set of secreting agents and $B_i$ the set of consuming agents and let $x_s$ be the position of agent $s$; the agents are then represented as a point-like source rate $o(x)$ and a point-like per-agent uptake rate $r(x)$ using Dirac delta functions
+Let $B_o$ denote the set of secreting agents and $B_i$ the set of consuming agents, and let $x_s$ be the position of agent $s$. The agents are represented as a point-like source rate $o(x)$ and a point-like per-agent uptake rate $r(x)$ using Dirac delta functions:
 
 $$
 o(x)
@@ -59,7 +59,7 @@ K_r
 \delta(x-x_s).
 $$
 
-where,
+with the following parameters:
 
 | Symbol | Description | Units |
 |---|---|---|
@@ -69,7 +69,7 @@ where,
 
 ## Module structure
 
-We want to build a typescript module `crankNicolson.ts` that will numerically solve this equation. The module will consist of three major parts: @lst-global-variables, @lst-cn-set-parameters, and @lst-cn-time-stepping:
+Before deriving the numerical method, we outline the software components that will implement it. We want to build a TypeScript module `crankNicolson.ts` that will numerically solve @eq-main. The module will consist of three major parts: @lst-global-variables, @lst-cn-set-parameters, and @lst-cn-time-stepping, as shown below:
 
 ```{.typescript #lst-crankNicolson lst-cap=lst-crankNicolson file=src/crankNicolson.ts filename="src/crankNicolson.ts"}
 
@@ -80,15 +80,17 @@ We want to build a typescript module `crankNicolson.ts` that will numerically so
 <<lst-cn-time-stepping>>
 ```
 
-This way, in @lst-global-variables we will store module-level variables and arrays that persist across time steps. In @lst-cn-set-parameters we will expose a function that someone can use to initiate the solver with their particular equation parameters and discretization grid or update the parameters that may change along the simulation. The time-stepping function will be in @lst-cn-time-stepping, this function will update the concentration by one or more time steps using the Thomas algorithm to solve the tridiagonal system.
+All code blocks shown in this chapter will be contained in either of these three parts. This way, in @lst-global-variables we will store module-level variables and arrays that persist across time steps. In @lst-cn-set-parameters we will expose a function that someone can use to initiate the solver with their particular equation parameters and discretization grid, or update the positions of agents that may move during the simulation. The main time-stepping loop will be in @lst-cn-time-stepping, this function will update the concentration by one or more time steps using the Thomas algorithm to solve the tridiagonal system.
 
 
 
 ## Discrete Approximation
 
+To solve @eq-main numerically, we first discretize space and time onto a finite grid.
+
 
 ```{ojs}
-//|code-fold: true
+//|echo: false
 d3 = require("d3@7")
 
 drawGrid = (N) => {
@@ -229,30 +231,30 @@ schematicN6 = drawGrid(6) // number of grid points, indices 0..5
 ```
 
 
-Discretize the 1D space by an uniform grid of length $N$ (`N`) with grid spacing $\Delta x$ (`dx`)
+Discretize the 1D space using a uniform grid with $N$ grid points (`N`) with grid spacing $\Delta x$ (`dx`)
 
 $$
 x_i = x_{\min} + i \Delta x \qquad i = 0, 1, \ldots, N-1,
 $$
 
-and discretize time by time-steps of length $\Delta t$ (`dt`) 
+and discretize time by time-steps of length $\Delta t$ (`dt`)
 
 $$
 t^n = n \Delta t,
 $$
 
 
-then, the array `U` stores the values $U_i^n$ where
+then, the array $U^n$ (`U`) approximates $u$, storing the values $U_i^n$ (`U[i]`) where
 
 $$
-u(x_i,t^n)\approx U_i^n 
+u(x_i,t^n)\approx U_i^n
 $$
 
 Approximate the Laplacian by
 
 $$
 \frac{\partial^2 u}{\partial x^2}\biggr|_{(x_i,t^n)}
-\approx 
+\approx
 [\Delta U]_i^n
 :=
 \frac{U_{i-1}^n - 2U_i^n + U_{i+1}^n}{(\Delta x)^2}.
@@ -270,7 +272,7 @@ $$
 \frac{U_i^{n+1} - U_i^n}{\Delta t}.
 $$ {#eq-forward-time-difference}
 
-The sources and sinks will be descretized as follows:
+The sources and sinks will be discretized as follows:
 $$
 o(x)
 \biggr|_{(x_i)}
@@ -305,7 +307,7 @@ m_i^{o} = \sum_{s\in B_o} \delta_{i,i_s}, \qquad
 m_i^{r} = \sum_{s\in B_i} \delta_{i,i_s},
 $$ {#eq-agents-counts}
 
-Here,  $\delta_{i,i_s}$ is the Kronecker delta, which is dimensionless (unlike the Dirac delta $\delta(x)$ used in the continuous case, which has units of $1/L^d$).
+Here, $\delta_{i,i_s}$ is the Kronecker delta, which is dimensionless (unlike the Dirac delta $\delta(x)$ used in the continuous case, which has units of $1/L^d$).
 
 
 
@@ -316,12 +318,12 @@ The factor $1/\Delta x$ represents each point-like agent as a source or sink dis
 This way, we can write the discretized @eq-main at a particular grid cell $i$ and time step $n$ as
 
 $$
-[D_t^+U]_i^n = D [\Delta U]_i^n +O_i - R_i U
-$$
+[D_t^+U]_i^n = D [\Delta U]_i^n +O_i - R_i U_i^n
+$${#eq-discrete}
 
 ## Setting parameters
 
-All the parameters related to the discretization choices (`dx`, `dt`, and `N`), reaction rates (`K_o` and `K_r`) and diffusion rate  (`D`) will be defined in @lst-cn-set-parameters:
+With the discretization defined, we now build the function that configures the solver with the chosen grid and reaction parameters. All the parameters related to the discretization choices (`dx`, `dt`, and `N`), reaction rates (`K_o` and `K_r`) and diffusion rate (`D`) will be supplied to @lst-cn-set-parameters:
 
 ```{.typescript #lst-cn-set-parameters lst-cap="lst-define-cn-set-parameters"}
 
@@ -342,7 +344,7 @@ export const CNSetParameters = (
 
 		  <<lst-alloc-q-beta>>
 		  <<lst-alloc-diagonals>>
-		  <<lst-alloc-thomas-scratch-arrays>> 	
+		  <<lst-alloc-thomas-scratch-arrays>>
 	}
 
 	<<lst-compute-lambda>>
@@ -351,18 +353,26 @@ export const CNSetParameters = (
 
 };
 ```
-
-which is one of the three major parts of the module (see @lst-crankNicolson). Notice that in the function `CNSetParameters()` we allocate arrays only if the number of grid cells `N` has changed or has not yet been initialized. This allows to create new arrays only when needed. In case that the number of grid points does not change between calls, all the arrays used in this module will get reused. For this reason `N` will be declare as a global variable in @lst-global-variables
-
+Notice that in the function `CNSetParameters()` we allocate arrays only if the number of grid cells `N` has changed or has not yet been initialized. As we will see, these arrays must have length `N`. If the number of grid points does not change between calls, all the arrays used in this module will get reused. For this reason `N` will be declared as a global variable in @lst-global-variables
 
 
 
+```{.typescript #lst-global-variables lst-cap="lst-global-variables"}
+import { thomasAlgorithm } from "./thomasAlgorithm.js";
+
+let N: number = 0;
+
+<<lst-declare-lambda-q-beta>>
+<<lst-declare-diagonals>>
+<<lst-declare-thomas-scratch-arrays>>
+```
 
 
 
-## Crank--Nicolson scheme 
 
-Using the Crank--Nicolson method, the diffusion and reaction is averaged between time levels $n$ and $n+1$. The source rate $O_i$ and the uptake rate $R_i$ are both constant along a single time step, so $O_i$ is included directly and only the concentration $u$ multiplying $R_i$ needs to be averaged between time levels:
+## Crank--Nicolson scheme
+
+Having discretized space and time, we now introduce the Crank--Nicolson method to advance the concentration forward in time. Using the Crank--Nicolson method, the diffusion and reaction terms in @eq-discrete are averaged between time levels $n$ and $n+1$. The source rate $O_i$ and the uptake rate $R_i$ are constant within a single time step. Therefore $O_i$ is included directly (it has no $U$-dependence to average), while both the diffusion term $[\Delta U]_i$ and the uptake term $R_i U$ are time-averaged:
 
 
 $$
@@ -380,7 +390,7 @@ U_i^{n+1} + U_i^n
 \right]
 $$ {#eq-crank-nicolson}
 
-Inserting @eq-discrete-laplacian and  @eq-forward-time-difference into
+Inserting @eq-discrete-laplacian and @eq-forward-time-difference into
 @eq-crank-nicolson and multiplying by $\Delta t$, we arrive at the linear system
 
 
@@ -410,7 +420,7 @@ O_i \Delta t
 $$ {#eq-crank-nicolson-expanded}
 
 
-For convenience, define the parameters $\lambda$ , $q_i$, and $\beta_i$:
+For convenience, define the parameters $\lambda$, $q_i$, and $\beta_i$:
 
 $$
 \lambda
@@ -450,24 +460,28 @@ U_i^{n+1} - U_i^n
 \end{aligned}
 $${#eq-row-i}
 
+:::{.callout-note title="Stability"}
+
+The Crank--Nicolson method is unconditionally stable for the pure diffusion equation. With the addition of the uptake term $-\beta_i (U_i^n + U_i^{n+1})$, the scheme remains stable provided the reaction time scale is not excessively small relative to $\Delta t$. In practice, for the parameter regimes typical of bacterial secretion and uptake, stability is not a concern.
+:::
 
 $\lambda$, $q$, and $\beta$ are declared as global variables in @lst-global-variables as
 
 ```{.typescript #lst-declare-lambda-q-beta lst-cap="lst-declare-lambda-q-beta"}
-let lambda: number;  
+let lambda: number;
 let q: Float64Array;
 let beta: Float64Array;
 ```
 
 
-The arrays `q` and `beta` are allocated with size `N` at @lst-cn-set-parameters only when `N` is detected to be differenc between calls
+The arrays `q` and `beta` are allocated with size `N` at @lst-cn-set-parameters
 
 ```{.typescript #lst-alloc-q-beta lst-cap="lst-alloc-q-beta"}
 q = new Float64Array(N);
 beta = new Float64Array(N);
 ```
 
-The parameters `lambda` and the entries of `q`, and `beta` are then computed inside the same @lst-cn-set-parameters 
+The parameters `lambda` and the entries of `q`, and `beta` are then computed inside the same @lst-cn-set-parameters
 as
 
 ```{.typescript #lst-compute-lambda lst-cap="lst-compute-lambda"}
@@ -483,13 +497,13 @@ for (let i: number = 0; i < N; i++) {
 	beta[i] = (R_i * dt) / 2.0;
 }
 ```
-Here we used the previusly computed `O_i` and `R_i` from @lst-compute-O-I
+Here we used the previously computed `O_i` and `R_i` from @lst-compute-O-I
 
 
 
 ## Tridiagonal system
 
-Collecting the unknown terms in @eq-row-i at time level $n+1$ on the left-hand side gives
+The Crank--Nicolson scheme yields a system of linear equations that we now rearrange into tridiagonal form. Collecting the unknown terms in @eq-row-i at time level $n+1$ on the left-hand side gives
 
 $$
 - \lambda U_{i-1}^{n+1}
@@ -505,11 +519,11 @@ $$ {#eq-crank-nicolson-tridiagonal}
 
 
 
-This equation applies to every grid point $i=0,\ldots,N-1$, so that for a spatial domain with $N$ grid points, we obtain a system of $N$ linear equations. For a case with Neumann boundary conditions, the system can be written in matrix form as 
+This equation applies to every interior grid point $i=1,\ldots,N-2$, while the Neumann boundary condition is applied at the boundary nodes $i=0$ and $i=N-1$. This way, for a spatial domain with $N$ grid points, we obtain a system of $N$ linear equations. The system can be written in matrix form as
 
 $$
 A U^{n+1} = d
-$$,
+$${#eq-matrix}
 
 where $A$ is the $N \times N$ tridiagonal matrix
 
@@ -550,19 +564,107 @@ d =
 \end{bmatrix}.
 $$
 
-Here, the entries of $A$ and $d$ at the boundaries $i=0$ and $i=N-1$ incorporate Neumann (zero-flux) boundary conditions. The solution vector $U^{n+1}$ is solved from the system $A U^{n+1} = d$ using the Thomas algorithm, whose implementation lives in a separate module. 
+Here, the entries of $A$ and $d$ at the boundaries $i=0$ and $i=N-1$ incorporate Neumann (zero-flux) boundary conditions. The solution vector $U^{n+1}$ is solved from the system $A U^{n+1} = d$ using the Thomas algorithm, whose implementation lives in a separate module.
 
 
 
+## Building the tridiagonal matrix $A$
 
-:::{.callout-note collapse=true title='Example for $N=5$ and Neuman BC'}
+We now implement the construction of the coefficient matrix $A$ from its three diagonals. The matrix $A$ is built from the lower, main, and upper diagonals.
+
+
+The three diagonals are declared in @lst-global-variables as global variables
+
+
+```{.typescript #lst-declare-diagonals lst-cap="lst-declare-diagonals"}
+let lowerDiagonal: Float64Array;
+let mainDiagonal: Float64Array;
+let upperDiagonal: Float64Array;
+```
+
+
+The diagonals are allocated with size `N` in @lst-cn-set-parameters
+
+```{.typescript #lst-alloc-diagonals lst-cap="lst-alloc-diagonals"}
+lowerDiagonal = new Float64Array(N);
+mainDiagonal = new Float64Array(N);
+upperDiagonal = new Float64Array(N);
+```
+
+and then filled with their corresponding parameter values in the same @lst-cn-set-parameters:
+
+```{.typescript #lst-fill-diagonals lst-cap="lst-fill-diagonals"}
+for (let i: number = 1; i < N - 1; i++) {
+  lowerDiagonal[i] = -lambda;
+  mainDiagonal[i] = 1.0 + 2.0 * lambda + beta[i];
+  upperDiagonal[i] = -lambda;
+}
+
+lowerDiagonal[0] = 0.0;
+mainDiagonal[0] = 1.0 + 2.0 * lambda + beta[0];
+upperDiagonal[0] = -2.0 * lambda;
+
+lowerDiagonal[N - 1] = -2.0 * lambda;
+mainDiagonal[N - 1] = 1.0 + 2.0 * lambda + beta[N - 1];
+upperDiagonal[N - 1] = 0.0;
+
+```
+
+Notice that in this indexing convention, we are setting the first element of the lower diagonal and the last element of the upper diagonal to zero, since the corresponding off-domain grid points ($i=-1$ and $i=N$) lie outside the computational domain.
+
+## Building the right-hand side
+
+With the matrix $A$ in place, we turn to constructing the right-hand side vector $d$. The entries of the right-hand side vector $d$ are given by @eq-crank-nicolson-tridiagonal. For interior grid points $i = 1,\ldots,N-2$, each entry is
+
+$$
+d_i = \lambda U_{i-1}^n + (1 - 2\lambda - \beta_i) U_i^n + \lambda U_{i+1}^n + q_i.
+$$
+
+To handle the Neumann (zero-flux) boundary conditions, we apply a centered-difference approximation to the zero-flux condition $\partial u/\partial x = 0$, which yields the ghost-cell mirroring $U_{-1} = U_1$. At the left boundary ($i=0$), zero flux implies $U_{-1} = U_1$, giving
+
+$$
+\begin{aligned}
+d_0
+&= \lambda U_{-1}^n + (1 - 2\lambda - \beta_0) U_0^n + \lambda U_1^n + q_0 \\
+&= (1 - 2\lambda - \beta_0) U_0^n + 2\lambda U_1^n + q_0.
+\end{aligned}
+$$
+
+Similarly, at the right boundary ($i=N-1$), $U_N = U_{N-2}$, so
+
+$$
+d_{N-1} = (1 - 2\lambda - \beta_{N-1}) U_{N-1}^n + 2\lambda U_{N-2}^n + q_{N-1}.
+$$
+
+The ghost-cell mirroring is implemented directly in the code that builds $d$ at each time step inside @lst-cn-time-stepping
+
+```{.typescript #lst-compute-rhs-vector lst-cap="lst-compute-rhs-vector"}
+
+for (let i: number = 1; i < N - 1; i++) {
+	d[i] = lambda * U[i - 1]
+		+ (1.0 - 2.0 * lambda - beta[i]) * U[i]
+		+ lambda * U[i + 1]
+		+ q[i];
+}
+
+d[0] = (1.0 - 2.0 * lambda - beta[0]) * U[0]
+	+ 2.0 * lambda * U[1]
+	+ q[0];
+
+d[N - 1] = (1.0 - 2.0 * lambda - beta[N - 1]) * U[N - 1]
+	+ 2.0 * lambda * U[N - 2]
+	+ q[N - 1];
+```
+Notice that, as long as the positions of the sinks and sources do not change, the three diagonals do not need to be recomputed. On the other hand, the vector $d$ has to be recomputed at every single time step, because it depends on the concentration from the previous step.
+
+:::{.callout-note collapse=true title='Example for $N=5$ and Neumann BC'}
 
 ```{ojs}
 //|code-fold: true
 schematicN5 = drawGrid(5)
 ```
 
-If we apply this equation to $5$ grid points ($i=0,1,2,3,4$), we obtain a system of $5$ linear equations for the unknowns $U_i^{n+1}$ 
+If we apply this equation to $5$ grid points ($i=0,1,2,3,4$), we obtain a system of $5$ linear equations for the unknowns $U_i^{n+1}$
 
 $$
 \begin{aligned}
@@ -612,7 +714,7 @@ $$
 +q_4.
 \end{aligned}
 $$
-Here, the red terms correspond to cells outside the domain which represent the boundary conditions. These are set to a constant value in the case of Dirichlet boundary conditions, or set via centered difference mirroring in the case of Neumann (zero-flux) boundary conditions. For this implementation, we use Neumann zero-flux boundary conditions. With centered differences, zero flux at the left boundary implies $U_{-1} = U_1$, and at the right boundary $U_{N} = U_{N-2}$. This way, by setting $U_{-1} = U_1$ and $U_5 = U_3$, we can eliminate the red terms, giving 
+Here, the red terms correspond to cells outside the domain which represent the boundary conditions. These are set to the prescribed boundary values in the case of Dirichlet boundary conditions, or set via centered difference mirroring in the case of Neumann (zero-flux) boundary conditions. For this implementation, we use Neumann zero-flux boundary conditions. With centered differences, zero flux at the left boundary implies $U_{-1} = U_1$, and at the right boundary $U_{N} = U_{N-2}$. This way, by setting $U_{-1} = U_1$ and $U_5 = U_3$, we can eliminate the red terms, giving
 
 $$
 \begin{aligned}
@@ -698,101 +800,29 @@ $$
 
 :::
 
-## Building the tridiagonal matrix $A$
 
 
-The matrix $A$ is built from the lower, main, and upper diagonals.
+## Thomas algorithm
 
- 
-The three diagonals are declared in @lst-global-variables as
+Now that the tridiagonal system is assembled, we solve it efficiently using the Thomas algorithm, a specialised form of Gaussian elimination for tridiagonal systems. This particular implementation requires as input parameters the three diagonals of matrix $A$, the right-hand side vector $d$, $N$, a buffer array `modifiedUpper` of length `N` and finally an array `U` where the algorithm will store the solution to $U^{n+1}$.
 
+The Thomas algorithm modifies the right-hand side `d` in place during forward elimination and needs `modifiedUpper` as a scratch buffer for the modified upper diagonal. To avoid allocating these arrays on every time step — they live inside the hot loop — we pre-allocate them at module scope.
 
-```{.typescript #lst-declare-diagonals lst-cap="lst-declare-diagonals"}
-let lowerDiagonal: Float64Array;
-let mainDiagonal: Float64Array;
-let upperDiagonal: Float64Array;
+They are declared at @lst-global-variables as
+
+```{.typescript #lst-declare-thomas-scratch-arrays lst-cap="lst-declare-thomas-scratch-arrays"}
+let modifiedUpper: Float64Array;
+let d: Float64Array;
 ```
 
+They are allocated by `CNSetParameters` as
 
-The diagonals are allocated with size `N` by `CNSetSize(N)`:
-
-```{.typescript #lst-alloc-diagonals lst-cap="lst-alloc-diagonals"}
-lowerDiagonal = new Float64Array(N);
-mainDiagonal = new Float64Array(N);
-upperDiagonal = new Float64Array(N);
+```{.typescript #lst-alloc-thomas-scratch-arrays lst-cap="lst-alloc-thomas-scratch-arrays"}
+modifiedUpper = new Float64Array(N);
+d = new Float64Array(N);
 ```
 
-and then filled with their corresponding parameter values by `CNSetParameters()`:
-
-```{.typescript #lst-fill-diagonals lst-cap="lst-fill-diagonals"}
-for (let i: number = 1; i < N - 1; i++) {
-  lowerDiagonal[i] = -lambda;
-  mainDiagonal[i] = 1.0 + 2.0 * lambda + beta[i];
-  upperDiagonal[i] = -lambda;
-}
-
-lowerDiagonal[0] = 0.0;
-mainDiagonal[0] = 1.0 + 2.0 * lambda + beta[0];
-upperDiagonal[0] = -2.0 * lambda;
-
-lowerDiagonal[N - 1] = -2.0 * lambda;
-mainDiagonal[N - 1] = 1.0 + 2.0 * lambda + beta[N - 1];
-upperDiagonal[N - 1] = 0.0;
-
-```
-
-
-## Building the right hand side
-
-The entries of the right-hand side vector $d$ is given by @eq-crank-nicolson-tridiagonal. For interior grid points $i = 1,\ldots,N-2$, each entry is
-
-$$
-d_i = \lambda U_{i-1}^n + (1 - 2\lambda - \beta_i) U_i^n + \lambda U_{i+1}^n + q_i.
-$$
-
-To handle the Neumann (zero-flux) boundary conditions we use centered differences to mirror the ghost cells. At the left boundary ($i=0$), zero flux implies $U_{-1} = U_1$, giving
-
-$$
-\begin{aligned}
-d_0
-&= \lambda U_{-1}^n + (1 - 2\lambda - \beta_0) U_0^n + \lambda U_1^n + q_0 \\
-&= (1 - 2\lambda - \beta_0) U_0^n + 2\lambda U_1^n + q_0.
-\end{aligned}
-$$
-
-Similarly, at the right boundary ($i=N-1$), $U_N = U_{N-2}$, so
-
-$$
-d_{N-1} = (1 - 2\lambda - \beta_{N-1}) U_{N-1}^n+  2\lambda U_{N-2}^n + q_{N-1}.
-$$
-
-The ghost-cell mirroring is implemented directly in the code that builds $d$ at each time step inside @lst-cn-time-stepping
-
-```{.typescript #lst-compute-rhs-vector lst-cap="lst-compute-rhs-vector"}
-
-for (let i: number = 1; i < N - 1; i++) {
-	d[i] = lambda * U[i - 1] 
-		+ (1.0 - 2.0 * lambda - beta[i]) * U[i]  
-		+ lambda * U[i + 1] 
-		+ q[i];
-}
-
-d[0] = (1.0 - 2.0 * lambda - beta[0]) * U[0] 
-	+ 2.0 * lambda * U[1] 
-	+ q[0];
-
-d[N - 1] = (1.0 - 2.0 * lambda - beta[N - 1]) * U[N - 1] 
-	+ 2.0 * lambda * U[N - 2]  
-	+ q[N - 1];
-```
-
-
-## Module structure
-
-The typescript file that implements this numerical method is organized into four main sections: @lst-global-variables,, @lst-cn-set-parameters, and @lst-cn-time-stepping.
-
-
-And in @lst-cn-time-stepping we will implement the time-stepping loop that advances the solution by solving the tridiagonal system at each step.
+The time-stepping loop assembles the right-hand side and calls the Thomas algorithm, as shown in @lst-cn-time-stepping:
 
 ```{.typescript #lst-cn-time-stepping lst-cap="lst-define-cn-time-stepping"}
 
@@ -820,51 +850,21 @@ export const CNTimeStepping = (
 };
 ```
 
+:::{.callout-note title="Initial condition"}
+
+The array `U` is expected to be populated with the initial concentration profile $U_i^0$ by the caller before the first invocation of `CNTimeStepping`. The module itself does not set or prescribe initial conditions.
+:::
+
+Since the movement of the agents is assumed to happen at very long time scales compared to $\Delta t$, we can update the concentration array `U` several times (`totalNumberOfIterations`) before updating their positions again in @lst-cn-set-parameters
+
+## Summary
+
+In this chapter we derived a Crank--Nicolson solver for the one-dimensional diffusion--reaction equation with point-like sources and sinks. The spatial discretization yields a tridiagonal linear system at each time step, which we solve efficiently using the Thomas algorithm. The module `crankNicolson.ts` exposes two functions: `CNSetParameters` to configure the solver, and `CNTimeStepping` to advance the concentration field in time.
+
+The one-dimensional model is restricted to geometries that can be approximated as a filament or channel. In the next chapter we generalize the method to two spatial dimensions using the Alternating Direction Implicit (ADI) method, which reduces the two-dimensional problem to a sequence of one-dimensional tridiagonal solves along each coordinate direction.
 
 
 
- 
-
-
-
-## Thomas‑solver scratch arrays
-
-The Thomas algorithm modifies the right‑hand side in place during forward elimination and needs a scratch buffer for the modified upper diagonal. Pre‑allocating these at module scope avoids re‑allocating on every time step.
-
-
-### Scratch arrays declaration
-
-They are declared at @lst-global-variables as
-
-```{.typescript #lst-declare-thomas-scratch-arrays lst-cap="lst-declare-thomas-scratch-arrays"}
-let modifiedUpper: Float64Array;
-let d: Float64Array;
-```
-
-### Scratch arrays allocation
-
-They are allocated by `CNSetSize(N)` as
-
-```{.typescript #lst-alloc-thomas-scratch-arrays lst-cap="lst-alloc-thomas-scratch-arrays"}
-modifiedUpper = new Float64Array(N);
-d = new Float64Array(N);
-```
-
-
-## Module‑level state
-
-We collect all the module‑level variables in the first part of the module together with the import of the Thomas algorithm
-
-
-```{.typescript #lst-global-variables lst-cap="lst-global-variables"}
-import { thomasAlgorithm } from "./thomasAlgorithm.js";
-
-let N: number;
-
-<<lst-declare-lambda-q-beta>>
-<<lst-declare-diagonals>>
-<<lst-declare-thomas-scratch-arrays>>
-```
 
 
 
