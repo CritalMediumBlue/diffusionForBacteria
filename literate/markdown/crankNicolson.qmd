@@ -106,11 +106,23 @@ drawGrid = (N,highlightCell) => {
       return [0, 1, 2, null, N - 2, N - 1];
     })();
 
-    const displayItems = cellIndices.map(i =>
-      i === null
-        ? { type: "dots" }
-        : { type: "node", i, x: i + 0.5, indexLabel: String(i) }
-    );
+    const displayItems = cellIndices.map(i => {
+      if (i === null) {
+        return { type: "dots" };
+      }
+
+      return {
+        type: "node",
+        i,
+        x: i + 0.5,
+        indexLabel:
+          N > 5 && i === N - 2
+            ? "N-2"
+            : N > 5 && i === N - 1
+            ? "N-1"
+            : String(i)
+      };
+    });
 
   const nodeItems = displayItems.filter(d => d.type === "node");
 
