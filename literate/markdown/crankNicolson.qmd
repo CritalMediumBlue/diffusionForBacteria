@@ -93,31 +93,38 @@ To solve @eq-main numerically, we first discretize space and time onto a finite 
 //|echo: false
 d3 = require("d3@7")
 
-drawGrid = (N) => {
+drawGrid = (N,highlightCell) => {
     const width = 420, height = 240;
     const marginX = 60;
 
-    const displayItems = (() => {
+    // Each entry is a cell index (or null for the elided gap between shown cells).
+    // Cell i occupies [i, i+1] and is sampled at its midpoint i+0.5 — cell-centered.
+    const cellIndices = (() => {
       if (N <= 5) {
-        return d3.range(N).map(i => ({ type: "node", i, x: i, indexLabel: String(i) }));
+        return d3.range(N);
       }
-      return [
-        { type: "node", i: 0, x: 0, indexLabel: "0" },
-        { type: "node", i: 1, x: 1, indexLabel: "1" },
-        { type: "node", i: 2, x: 2, indexLabel: "2" },
-        { type: "dots" },
-        { type: "node", i: N - 2, x: N - 2, indexLabel: "N-2" },
-        { type: "node", i: N - 1, x: N - 1, indexLabel: "N-1" }
-      ];
+      return [0, 1, 2, null, N - 2, N - 1];
     })();
 
+    const displayItems = cellIndices.map(i =>
+      i === null
+        ? { type: "dots" }
+        : { type: "node", i, x: i + 0.5, indexLabel: String(i) }
+    );
+
   const nodeItems = displayItems.filter(d => d.type === "node");
+
+  // Cell-boundary tick marks: every integer boundary adjacent to a shown cell.
+  const boundarySet = new Set();
+  nodeItems.forEach(d => { boundarySet.add(d.i); boundarySet.add(d.i + 1); });
+  const boundaries = Array.from(boundarySet).sort((a, b) => a - b);
+
 
   const yN  = 90;  // baseline for time level n
   const yN1 = 190; // baseline for time level n+1
 
   const x = d3.scaleLinear()
-      .domain([0, N - 1])
+      .domain([0, N])
       .range([marginX, width - marginX]);
 
   const svg = d3.create("svg")
@@ -134,14 +141,35 @@ drawGrid = (N) => {
       .attr("d", "M0,0 L10,5 L0,10 Z")
       .attr("fill", "gray");
 
+  // Shade one cell's full width to make clear a grid point represents a whole
+  // cell, sampled at its center, not a single physical point.
+  [yN, yN1].forEach(y => {
+    svg.append("rect")
+        .attr("x", x(highlightCell))
+        .attr("width", x(highlightCell + 1) - x(highlightCell))
+        .attr("y", y - 21)
+        .attr("height", 42)
+        .attr("fill", "#4C78A8")
+        .attr("fill-opacity", 0.12);
+  });
+
   function drawRow(y, label) {
     const safeId = label.replace("+", "");
 
     svg.append("line")
-        .attr("x1", x(0)).attr("x2", x(N - 1))
+        .attr("x1", x(0)).attr("x2", x(N))
         .attr("y1", y).attr("y2", y)
         .attr("stroke", "black")
         .attr("stroke-width", 1.5);
+
+    svg.selectAll(`line.tick-${safeId}`)
+      .data(boundaries)
+      .join("line")
+        .attr("class", `tick-${safeId}`)
+        .attr("x1", b => x(b)).attr("x2", b => x(b))
+        .attr("y1", y - 8).attr("y2", y + 8)
+        .attr("stroke", "black")
+        .attr("stroke-width", 1);
 
     svg.selectAll(`circle.row-${safeId}`)
       .data(nodeItems)
@@ -172,7 +200,7 @@ drawGrid = (N) => {
         .text(d.indexLabel);
     } else {
       svg.append("text")
-        .attr("x", (x(2) + x(N - 2)) / 2)
+        .attr("x", (x(3) + x(N - 2)) / 2)
         .attr("y", yN - 22)
         .attr("text-anchor", "middle")
         .attr("font-size", "12px")
@@ -183,7 +211,7 @@ drawGrid = (N) => {
   nodeItems.forEach(d => {
     svg.append("line")
         .attr("x1", x(d.x)).attr("x2", x(d.x))
-        .attr("y1", yN + 6).attr("y2", yN1 - 6)
+        .attr("y1", yN + 9).attr("y2", yN1 - 9)
         .attr("stroke", "lightgray")
         .attr("stroke-dasharray", "3,3");
   });
@@ -202,17 +230,38 @@ drawGrid = (N) => {
       .text("Δt");
 
   svg.append("line")
-      .attr("x1", x(0)+12).attr("x2", x(1)-12)
-      .attr("y1", yN - 25).attr("y2", yN - 25)
+      .attr("x1", x(highlightCell)).attr("x2", x(highlightCell + 1))
+      .attr("y1", yN - 40).attr("y2", yN - 40)
       .attr("stroke", "gray")
       .attr("marker-end", "url(#arrow)")
       .attr("marker-start", "url(#arrow)");
 
   svg.append("text")
-      .attr("x", (x(0) + x(1)) / 2)
-      .attr("y", yN - 32)
+      .attr("x", (x(highlightCell) + x(highlightCell + 1)) / 2)
+      .attr("y", yN - 42)
       .attr("text-anchor", "middle")
       .text("Δx");
+
+  const xMinLabel = svg.append("text")
+      .attr("x", x(0))
+      .attr("y", yN + 125)
+      .attr("text-anchor", "middle");
+  xMinLabel.append("tspan").text("x");
+  xMinLabel.append("tspan")
+      .attr("dy", "0.25em")
+      .attr("font-size", "0.7em")
+      .text("min");
+
+const x2Label = svg.append("text")
+      .attr("x", (x(highlightCell) + x(highlightCell + 1)) / 2)
+      .attr("y", yN + 125)
+      .attr("text-anchor", "middle");
+  x2Label.append("tspan").text("x");
+  x2Label.append("tspan")
+      .attr("dy", "0.25em")
+      .attr("font-size", "0.7em")
+      .text(String(highlightCell));
+
 
   svg.append("text")
       .attr("x", width / 2)
@@ -227,14 +276,14 @@ drawGrid = (N) => {
   return container;
 }
 
-schematicN6 = drawGrid(6) // number of grid points, indices 0..5
+schematicN6 = drawGrid(6,1) // number of cells, indices 0..5
 ```
 
 
-Discretize the 1D space using a uniform grid with $N$ grid points (`N`) with grid spacing $\Delta x$ (`dx`)
+Discretize the 1D space using a uniform grid of $N$ cells (`N`) with grid spacing $\Delta x$ (`dx`). The grid is cell-centered: cell $i$ represents the interval $[x_{\min}+i\Delta x,\,x_{\min}+(i+1)\Delta x]$ and is sampled at its midpoint,
 
 $$
-x_i = x_{\min} + i \Delta x \qquad i = 0, 1, \ldots, N-1,
+x_i = x_{\min} + (i+0.5) \Delta x \qquad i = 0, 1, \ldots, N-1,
 $$
 
 and discretize time by time-steps of length $\Delta t$ (`dt`)
@@ -516,10 +565,7 @@ $$
 +q_i.
 $$ {#eq-crank-nicolson-tridiagonal}
 
-
-
-
-This equation applies to every interior grid point $i=1,\ldots,N-2$, while the Neumann boundary condition is applied at the boundary nodes $i=0$ and $i=N-1$. This way, for a spatial domain with $N$ grid points, we obtain a system of $N$ linear equations. The system can be written in matrix form as
+This equation applies to every interior grid cell $i=1,\ldots,N-2$, while the Neumann boundary condition is applied at the boundary cells $i=0$ and $i=N-1$. Because the grid is cell-centered, the zero-flux ghost value at each boundary equals the boundary cell's own value rather than its interior neighbor's — this reduces the boundary main-diagonal coefficient instead of doubling the boundary off-diagonal one, as derived in the next two sections. This way, for a spatial domain with $N$ grid cells, we obtain a system of $N$ linear equations. The system can be written in matrix form as
 
 $$
 A U^{n+1} = d
@@ -530,11 +576,11 @@ where $A$ is the $N \times N$ tridiagonal matrix
 $$
 A =
 \begin{bmatrix}
-1 + 2\lambda + \beta_0 & -2\lambda & 0 & \cdots & 0 \\
+1 + \lambda + \beta_0 & -\lambda & 0 & \cdots & 0 \\
 -\lambda & 1 + 2\lambda + \beta_1 & -\lambda & \ddots & \vdots \\
 0 & -\lambda & \ddots & \ddots & 0 \\
 \vdots & \ddots & \ddots & 1 + 2\lambda + \beta_{N-2} & -\lambda \\
-0 & \cdots & 0 & -2\lambda & 1 + 2\lambda + \beta_{N-1}
+0 & \cdots & 0 & -\lambda & 1 + \lambda + \beta_{N-1}
 \end{bmatrix},
 $$
 
@@ -556,11 +602,11 @@ and the right-hand side vector $d$ is given by
 $$
 d =
 \begin{bmatrix}
-\left(1 - 2\lambda - \beta_0\right) U_0^n + 2\lambda U_1^n + q_0 \\
+\left(1 - \lambda - \beta_0\right) U_0^n + \lambda U_1^n + q_0 \\
 \lambda U_0^n + \left(1 - 2\lambda - \beta_1\right) U_1^n + \lambda U_2^n + q_1 \\
 \vdots \\
 \lambda U_{N-3}^n + \left(1 - 2\lambda - \beta_{N-2}\right) U_{N-2}^n + \lambda U_{N-1}^n + q_{N-2} \\
-2\lambda U_{N-2}^n + \left(1 - 2\lambda - \beta_{N-1}\right) U_{N-1}^n + q_{N-1}
+\lambda U_{N-2}^n + \left(1 - \lambda - \beta_{N-1}\right) U_{N-1}^n + q_{N-1}
 \end{bmatrix}.
 $$
 
@@ -601,16 +647,16 @@ for (let i: number = 1; i < N - 1; i++) {
 }
 
 lowerDiagonal[0] = 0.0;
-mainDiagonal[0] = 1.0 + 2.0 * lambda + beta[0];
-upperDiagonal[0] = -2.0 * lambda;
+mainDiagonal[0] = 1.0 + lambda + beta[0];
+upperDiagonal[0] = -lambda;
 
-lowerDiagonal[N - 1] = -2.0 * lambda;
-mainDiagonal[N - 1] = 1.0 + 2.0 * lambda + beta[N - 1];
+lowerDiagonal[N - 1] = -lambda;
+mainDiagonal[N - 1] = 1.0 + lambda + beta[N - 1];
 upperDiagonal[N - 1] = 0.0;
 
 ```
 
-Notice that in this indexing convention, we are setting the first element of the lower diagonal and the last element of the upper diagonal to zero, since the corresponding off-domain grid points ($i=-1$ and $i=N$) lie outside the computational domain.
+Notice that we set the first element of the lower diagonal and the last element of the upper diagonal to zero, since the corresponding off-domain grid cells ($i=-1$ and $i=N$) lie outside the computational domain, while the off-diagonal entries pointing *into* the domain ($upperDiagonal[0]$, $lowerDiagonal[N-1]$) stay at the ordinary interior value $-\lambda$ — only the main diagonal is reduced at the boundary, per the cell-centered Neumann condition derived above.
 
 ## Building the right-hand side
 
@@ -620,23 +666,23 @@ $$
 d_i = \lambda U_{i-1}^n + (1 - 2\lambda - \beta_i) U_i^n + \lambda U_{i+1}^n + q_i.
 $$
 
-To handle the Neumann (zero-flux) boundary conditions, we apply a centered-difference approximation to the zero-flux condition $\partial u/\partial x = 0$, which yields the ghost-cell mirroring $U_{-1} = U_1$. At the left boundary ($i=0$), zero flux implies $U_{-1} = U_1$, giving
+To handle the Neumann (zero-flux) boundary conditions on this cell-centered grid, the ghost cell just outside the domain equals the boundary cell's own value: $U_{-1} = U_0$ at the left boundary and $U_N = U_{N-1}$ at the right boundary. Substituting $U_{-1}=U_0$ at $i=0$ gives
 
 $$
 \begin{aligned}
 d_0
 &= \lambda U_{-1}^n + (1 - 2\lambda - \beta_0) U_0^n + \lambda U_1^n + q_0 \\
-&= (1 - 2\lambda - \beta_0) U_0^n + 2\lambda U_1^n + q_0.
+&= (1 - \lambda - \beta_0) U_0^n + \lambda U_1^n + q_0.
 \end{aligned}
 $$
 
-Similarly, at the right boundary ($i=N-1$), $U_N = U_{N-2}$, so
+Similarly, at the right boundary ($i=N-1$), $U_N = U_{N-1}$, so
 
 $$
-d_{N-1} = (1 - 2\lambda - \beta_{N-1}) U_{N-1}^n + 2\lambda U_{N-2}^n + q_{N-1}.
+d_{N-1} = (1 - \lambda - \beta_{N-1}) U_{N-1}^n + \lambda U_{N-2}^n + q_{N-1}.
 $$
 
-The ghost-cell mirroring is implemented directly in the code that builds $d$ at each time step inside @lst-cn-time-stepping
+This boundary treatment is implemented directly in the code that builds $d$ at each time step inside @lst-cn-time-stepping
 
 ```{.typescript #lst-compute-rhs-vector lst-cap="lst-compute-rhs-vector"}
 
@@ -647,12 +693,12 @@ for (let i: number = 1; i < N - 1; i++) {
 		+ q[i];
 }
 
-d[0] = (1.0 - 2.0 * lambda - beta[0]) * U[0]
-	+ 2.0 * lambda * U[1]
+d[0] = (1.0 - lambda - beta[0]) * U[0]
+	+ lambda * U[1]
 	+ q[0];
 
-d[N - 1] = (1.0 - 2.0 * lambda - beta[N - 1]) * U[N - 1]
-	+ 2.0 * lambda * U[N - 2]
+d[N - 1] = (1.0 - lambda - beta[N - 1]) * U[N - 1]
+	+ lambda * U[N - 2]
 	+ q[N - 1];
 ```
 Notice that, as long as the positions of the sinks and sources do not change, the three diagonals do not need to be recomputed. On the other hand, the vector $d$ has to be recomputed at every single time step, because it depends on the concentration from the previous step.
@@ -661,7 +707,7 @@ Notice that, as long as the positions of the sinks and sources do not change, th
 
 ```{ojs}
 //|code-fold: true
-schematicN5 = drawGrid(5)
+schematicN5 = drawGrid(5,2)
 ```
 
 If we apply this equation to $5$ grid points ($i=0,1,2,3,4$), we obtain a system of $5$ linear equations for the unknowns $U_i^{n+1}$
@@ -714,14 +760,14 @@ $$
 +q_4.
 \end{aligned}
 $$
-Here, the red terms correspond to cells outside the domain which represent the boundary conditions. These are set to the prescribed boundary values in the case of Dirichlet boundary conditions, or set via centered difference mirroring in the case of Neumann (zero-flux) boundary conditions. For this implementation, we use Neumann zero-flux boundary conditions. With centered differences, zero flux at the left boundary implies $U_{-1} = U_1$, and at the right boundary $U_{N} = U_{N-2}$. This way, by setting $U_{-1} = U_1$ and $U_5 = U_3$, we can eliminate the red terms, giving
+Here, the red terms correspond to cells outside the domain which represent the boundary conditions. These are set to the prescribed boundary values in the case of Dirichlet boundary conditions, or set via ghost-cell mirroring in the case of Neumann (zero-flux) boundary conditions. For this implementation, we use Neumann zero-flux boundary conditions on a cell-centered grid, so the ghost cell equals the boundary cell's own value: $U_{-1} = U_0$ at the left boundary and $U_{N} = U_{N-1}$ at the right boundary. This way, by setting $U_{-1} = U_0$ and $U_5 = U_4$, we can eliminate the red terms, giving
 
 $$
 \begin{aligned}
-\left(1 + 2\lambda + \beta_0\right) U_0^{n+1} - 2\lambda U_{1}^{n+1}
+\left(1 + \lambda + \beta_0\right) U_0^{n+1} - \lambda U_{1}^{n+1}
 ={}&
-\left(1 - 2\lambda - \beta_0\right) U_0^n
-+ 2\lambda U_{1}^{n}
+\left(1 - \lambda - \beta_0\right) U_0^n
++ \lambda U_{1}^{n}
 +q_0,
 \\
 - \lambda U_{0}^{n+1}
@@ -751,11 +797,11 @@ $$
 +\lambda U_{4}^{n}
 +q_3,
 \\
-- 2\lambda U_{3}^{n+1}
-+ \left(1 + 2\lambda + \beta_4\right) U_4^{n+1}
+- \lambda U_{3}^{n+1}
++ \left(1 + \lambda + \beta_4\right) U_4^{n+1}
 ={}&
- 2\lambda U_{3}^{n}
-+\left(1 - 2\lambda - \beta_4\right) U_4^n
+ \lambda U_{3}^{n}
++\left(1 - \lambda - \beta_4\right) U_4^n
 +q_4.
 \end{aligned}
 $$
@@ -765,11 +811,11 @@ This is a tridiagonal system that can be represented in matrix form as $A U^{n+1
 $$
 A =
 \begin{bmatrix}
-1 + 2\lambda + \beta_0 & -2\lambda & 0 & 0 & 0 \\
+1 + \lambda + \beta_0 & -\lambda & 0 & 0 & 0 \\
 -\lambda & 1 + 2\lambda + \beta_1 & -\lambda & 0 & 0 \\
 0 & -\lambda & 1 + 2\lambda + \beta_2 & -\lambda & 0 \\
 0 & 0 & -\lambda & 1 + 2\lambda + \beta_3 & -\lambda \\
-0 & 0 & 0 & -2\lambda & 1 + 2\lambda + \beta_4
+0 & 0 & 0 & -\lambda & 1 + \lambda + \beta_4
 \end{bmatrix},
 $$
 
@@ -790,11 +836,11 @@ and the right-hand side vector $d$ is
 $$
 d =
 \begin{bmatrix}
-\left(1 - 2\lambda - \beta_0\right) U_0^n + 2\lambda U_1^n + q_0 \\
+\left(1 - \lambda - \beta_0\right) U_0^n + \lambda U_1^n + q_0 \\
 \lambda U_0^n + \left(1 - 2\lambda - \beta_1\right) U_1^n + \lambda U_2^n + q_1 \\
 \lambda U_1^n + \left(1 - 2\lambda - \beta_2\right) U_2^n + \lambda U_3^n + q_2 \\
 \lambda U_2^n + \left(1 - 2\lambda - \beta_3\right) U_3^n + \lambda U_4^n + q_3 \\
-2\lambda U_3^n + \left(1 - 2\lambda - \beta_4\right) U_4^n + q_4
+\lambda U_3^n + \left(1 - \lambda - \beta_4\right) U_4^n + q_4
 \end{bmatrix}.
 $$
 
