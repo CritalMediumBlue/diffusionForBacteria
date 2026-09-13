@@ -1,138 +1,360 @@
-# Explaining the ADI Method
+# Alternating Direction Implicit (ADI) Method
 
-The Alternating Direction Implicit (ADI) method solves the 2‑D diffusion
-equation with optional sink terms. It splits each time step into two
-half‑steps: an **x‑sweep** that treats the x‑derivative implicitly and the
-y‑derivative explicitly, followed by a **y‑sweep** that does the opposite.
-This turns a large 2‑D system into many small tridiagonal systems that can
-be solved efficiently with the Thomas algorithm.
+## Biological problem
 
-The module keeps all working arrays and coefficients at module scope so
-that they are allocated only once and reused across many calls to `ADI`.
+This chapter generalizes the one-dimensional model of the Crank--Nicolson chapter to two spatial dimensions. We consider a substance with concentration $u(x,y,t)$ diffusing over a two-dimensional domain (e.g. a surface or a thin layer) with constant diffusion coefficient $D$, in the presence of point-like secreting and consuming agents distributed over that surface.
 
-## Imports and module‑level state
+We reuse the units and dimensions convention from the Crank--Nicolson chapter: $M$ for amount of substance, $L$ for length, $T$ for time.
 
-We import the Thomas algorithm solver. No other imports are needed because
-the array‑initialisation code is defined later in this same module.
+## Equation to solve
 
-```{.typescript #adi-imports}
+The governing diffusion--reaction equation, generalizing @eq-main to two dimensions, is
+
+$$
+\frac{\partial u}{\partial t}
+=
+D \left(
+\frac{\partial^2 u}{\partial x^2}
++
+\frac{\partial^2 u}{\partial y^2}
+\right)
++
+o(x,y)
+-
+r(x,y)\,u.
+$$ {#eq-adi-main}
+
+Here $o(x,y)$ and $r(x,y)$ are the same kind of point-source and per-agent uptake terms defined in the Crank--Nicolson chapter (@eq-source-discrete and @eq-sink-discrete), now distributed over a 2-D grid instead of along a line. As before,
+
+| Symbol | Description | Units |
+|---|---|---|
+| $u(x,y,t)$ | Extracellular concentration | $M/L^2$ |
+| $D$ | Diffusion coefficient | $L^2/T$ |
+| $o(x,y)$ | Source term (production of $u$) | $M/(L^2\,T)$ |
+| $r(x,y)$ | per-agent uptake rate coefficient | $1/T$ |
+
+## Module structure
+
+We build a TypeScript module `adi.ts` that numerically solves @eq-adi-main. As in the Crank--Nicolson chapter, we preview the module's shape before deriving the numerics:
+
+```{.typescript #lst-adi lst-cap=lst-adi file=src/adi.ts filename="src/adi.ts"}
+
+<<lst-adi-global-variables>>
+
+<<lst-adi-build-sweep-diagonal-fn>>
+
+<<lst-adi-set-properties>>
+
+<<lst-adi-update-sinks-sources>>
+
+<<lst-adi-update-main-diagonal>>
+
+<<lst-adi-x-sweep>>
+
+<<lst-adi-y-sweep>>
+
+<<lst-adi-main-function>>
+```
+
+`lst-adi-global-variables` stores module-level state that persists across time steps, exactly as in the Crank--Nicolson module. `lst-adi-build-sweep-diagonal-fn` is a private helper used while setting up the diagonals. `lst-adi-set-properties` configures the solver for a chosen grid size and diffusion rate. `lst-adi-update-sinks-sources` recomputes the per-cell source/sink coefficients whenever agents move. `lst-adi-update-main-diagonal` is a small shared helper used by both sweeps. `lst-adi-x-sweep` and `lst-adi-y-sweep` implement the two half-steps, and `lst-adi-main-function` contains the exported `ADI` time-stepping loop that calls them.
+
+## Discrete approximation and operator splitting
+
+We discretize the domain with `width` ($N_x$) grid points in $x$ and `height` ($N_y$) grid points in $y$, spaced by the same $\Delta x$ in both directions (this implementation assumes square grid cells; see the note below). The array `U` (flattened row-major, `U[j * width + i]` $\approx u(x_i,y_j,t^n)$) plays the same role as the 1-D array `U` in the Crank--Nicolson chapter, and time is discretized identically ($t^n = n\Delta t$).
+
+:::{.callout-note title="Square-cell assumption"}
+`setADIProperties` takes a single grid spacing `dx`, used for both directions. This module does not support anisotropic grids ($\Delta x \neq \Delta y$); every caller in this codebase uses a square grid, so this is documented here as a known simplification rather than generalized.
+:::
+
+Solving the full 2-D implicit system directly at every time step would require inverting a large, non-tridiagonal matrix. The **Alternating Direction Implicit (ADI)** method (Peaceman--Rachford splitting) avoids this by splitting each time step $\Delta t$ into two half-steps, each of which is tridiagonal and solvable with the Thomas algorithm exactly as in the Crank--Nicolson chapter:
+
+- **x-sweep**: advance from $t^n$ to the intermediate level $U^{*}$, treating the $x$-derivative implicitly and the $y$-derivative explicitly.
+- **y-sweep**: advance from $U^{*}$ to $t^{n+1}$, treating the $y$-derivative implicitly and the $x$-derivative explicitly.
+
+Each sweep solves one tridiagonal system per row (x-sweep) or column (y-sweep), reusing the same `thomasAlgorithm` used in the Crank--Nicolson chapter.
+
+## Parameters $\lambda$, $q$, and $\gamma$
+
+Define, exactly as in the Crank--Nicolson chapter,
+
+$$
+\lambda = \frac{D\Delta t}{2\Delta x^2}.
+$$ {#eq-adi-lambda}
+
+Note that $\lambda$ here has the same value and meaning as $\lambda$ in @eq-crank-nicolson-tridiagonal — each ADI sweep is a one-dimensional Crank--Nicolson half-step with this same diffusion coefficient. Each grid cell also carries a source contribution $q_{i,j}$ and a reaction contribution $\gamma_{i,j}$, both scaled for a half time step:
+
+$$
+q_{i,j} = O_{i,j}\,\frac{\Delta t}{2},
+\qquad
+\gamma_{i,j} = R_{i,j}\,\frac{\Delta t}{4},
+$$ {#eq-adi-q-gamma}
+
+where $O_{i,j}$ and $R_{i,j}$ are the 2-D analogues of @eq-source-discrete and @eq-sink-discrete. Because both sweeps apply $q_{i,j}$ and $\gamma_{i,j}$ once each, a full iteration (x-sweep + y-sweep) applies a total source contribution $O_{i,j}\Delta t$ and a total reaction contribution $R_{i,j}\Delta t/2$ — matching the full-step $q_i$ and $\beta_i$ of the Crank--Nicolson chapter (@eq-crank-nicolson) exactly.
+
+## Global state
+
+`lambda`, `q`, and `gamma` are declared alongside the rest of the module's persistent state in `lst-adi-global-variables`. Each sweep direction needs its own tridiagonal diagonals and Thomas-algorithm scratch buffers (`X`-suffixed arrays have length `width`, `Y`-suffixed arrays have length `height`), and the two sweeps are connected through the intermediate field `uStar`:
+
+```{.typescript #lst-adi-global-variables lst-cap="lst-adi-global-variables"}
 import { thomasAlgorithm } from "./thomasAlgorithm.js";
-```
 
-The following variables hold the grid dimensions, the tridiagonal
-coefficients for both sweeps, the intermediate concentration field, and
-the pre‑computed constants `alpha`, `halfDeltaT`, `scaledSources`, and
-`gamma` (which incorporates the sink term).
-
-```{.typescript #adi-variables}
-let WIDTH: number;
-let HEIGHT: number;
-let modifiedUpperDiagonal1: Float64Array, solution1: Float64Array;
-let modifiedUpperDiagonal2: Float64Array, solution2: Float64Array;
-let intermediateConcentration: Float64Array;
-let a1: Float64Array, b1: Float64Array, c1: Float64Array, d1: Float64Array;
-let a2: Float64Array, b2: Float64Array, c2: Float64Array, d2: Float64Array;
-let alpha: number, halfDeltaT: number, scaledSources: Float64Array;
+let width: number = 0;
+let height: number = 0;
+let dt: number;
+let lambda: number;
+let q: Float64Array;
 let gamma: Float64Array;
+
+let uStar: Float64Array;
+
+let lowerX: Float64Array, mainX: Float64Array, upperX: Float64Array, rhsX: Float64Array;
+let modifiedUpperX: Float64Array, solutionX: Float64Array;
+
+let lowerY: Float64Array, mainY: Float64Array, upperY: Float64Array, rhsY: Float64Array;
+let modifiedUpperY: Float64Array, solutionY: Float64Array;
 ```
 
-## Initialising the ADI arrays
+## Setting parameters
 
-`setADIProperties` must be called once before any simulation. It stores
-the grid size and calls `initADIArrays` to allocate all working storage
-and compute the constant `alpha = D Δt / (2 Δx²)`.
+`setADIProperties` configures the solver for a chosen grid size, diffusion rate, and time step, reallocating the working arrays only when the grid dimensions change — the same allocate-once-and-reuse pattern as `CNSetParameters`:
 
-```{.typescript #adi-set-properties}
+```{.typescript #lst-adi-set-properties lst-cap="lst-adi-set-properties"}
 export const setADIProperties = (
-    width: number,
-    height: number,
-    diffusionCoefficient: number,
-    deltaX: number,
+    numberOfGridPointsX: number,
+    numberOfGridPointsY: number,
+    D: number,
+    dx: number,
     deltaT: number,
 ): void => {
-    WIDTH = width;
-    HEIGHT = height;
-    ({
-        modifiedUpperDiagonal1,
-        solution1,
-        modifiedUpperDiagonal2,
-        solution2,
-        intermediateConcentration,
-        a1,
-        b1,
-        c1,
-        d1,
-        a2,
-        b2,
-        c2,
-        d2,
-        alpha,
-        halfDeltaT,
-        scaledSources,
-        gamma,
-    } = initADIArrays(WIDTH, HEIGHT, diffusionCoefficient, deltaX, deltaT));
+    if (width !== numberOfGridPointsX || height !== numberOfGridPointsY) {
+        width = numberOfGridPointsX;
+        height = numberOfGridPointsY;
+
+        <<lst-adi-alloc-arrays>>
+    }
+
+    dt = deltaT;
+    lambda = (D * dt) / (2.0 * dx * dx);
+
+    <<lst-adi-build-sweep-diagonals>>
 };
 ```
 
+The working arrays are allocated with the sizes implied by `width` and `height`:
+
+```{.typescript #lst-adi-alloc-arrays lst-cap="lst-adi-alloc-arrays"}
+q = new Float64Array(width * height);
+gamma = new Float64Array(width * height);
+uStar = new Float64Array(width * height);
+
+lowerX = new Float64Array(width);
+mainX = new Float64Array(width);
+upperX = new Float64Array(width);
+rhsX = new Float64Array(width);
+modifiedUpperX = new Float64Array(width);
+solutionX = new Float64Array(width);
+
+lowerY = new Float64Array(height);
+mainY = new Float64Array(height);
+upperY = new Float64Array(height);
+rhsY = new Float64Array(height);
+modifiedUpperY = new Float64Array(height);
+solutionY = new Float64Array(height);
+```
+
+## A cell-centered grid, and its Neumann boundary condition
+
+Before building the diagonals, one difference from the Crank--Nicolson chapter needs to be made explicit. The Crank--Nicolson grid is **node-centered**: $x_i = x_{\min} + i\Delta x$, so grid point $0$ sits exactly on the domain boundary, and its zero-flux ghost neighbor is the mirror image *across that point*, i.e. the first interior neighbor, $U_{-1}=U_1$ (@eq-crank-nicolson-tridiagonal).
+
+This module's grid is **cell-centered** instead: cell $i$ represents the interval $[i\Delta x,(i+1)\Delta x]$ and is sampled at its midpoint, $x_i=(i+0.5)\Delta x$ (this is also the convention used by `analyticSteadyState`, against which the module is validated). On a cell-centered grid, the domain boundary lies *between* the ghost cell and cell $0$, exactly halfway — so the ghost cell's mirror image is cell $0$ **itself**:
+
+$$
+U_{-1,j} = U_{0,j}, \qquad U_{\text{width},j} = U_{\text{width}-1,j},
+$$ {#eq-adi-ghost}
+
+and similarly for the top/bottom boundary in $j$. Substituting @eq-adi-ghost into the general tridiagonal row (@eq-adi-x-sweep below) collapses the boundary equation to a *reduced* main-diagonal coefficient, with the off-diagonal entry left untouched:
+
+$$
+\left(1+\lambda+\gamma_{0,j}\right) U^{*}_{0,j} - \lambda U^{*}_{1,j}
+=
+\left(1-\lambda-\gamma_{0,j}\right) U^{n}_{0,j} + \lambda U^{n}_{1,j} + q_{0,j},
+$$ {#eq-adi-x-sweep-boundary}
+
+and analogously at $i=\text{width}-1$. This is the opposite adjustment from the Crank--Nicolson chapter, which instead *doubles the off-diagonal entry* and leaves the main diagonal unchanged — because there, the ghost mirrors onto the next interior neighbor rather than onto the boundary cell itself.
+
+With this settled, the lower and upper diagonals depend only on $\lambda$ (a constant) and only need one entry zeroed at each end — they never need to be rebuilt per row/column, unlike the main diagonal (below), which also carries the spatially varying $\gamma_{i,j}$:
+
+```{.typescript #lst-adi-build-sweep-diagonals lst-cap="lst-adi-build-sweep-diagonals"}
+buildSweepDiagonal(lowerX, upperX, width);
+buildSweepDiagonal(lowerY, upperY, height);
+```
+
+```{.typescript #lst-adi-build-sweep-diagonal-fn lst-cap="lst-adi-build-sweep-diagonal-fn"}
+const buildSweepDiagonal = (
+    lower: Float64Array,
+    upper: Float64Array,
+    length: number,
+): void => {
+    lower.fill(-lambda);
+    upper.fill(-lambda);
+
+    lower[0] = 0.0;
+    upper[length - 1] = 0.0;
+};
+```
+
+`buildSweepDiagonal` is defined once, right after the global variables, and used for both sweep directions.
+
 ## Updating sinks and sources
 
-Before each call to `ADI` (or whenever the source/sink arrays change),
-`updateSinksAndSources` pre‑scales the source and sink terms so that they
-can be added directly to the right‑hand side during the sweeps.
+Whenever the agents' positions change, `updateSinksAndSources` recomputes $q_{i,j}$ and $\gamma_{i,j}$ from @eq-adi-q-gamma for every grid cell:
 
-```{.typescript #adi-update-sinks-sources}
+```{.typescript #lst-adi-update-sinks-sources lst-cap="lst-adi-update-sinks-sources"}
 export const updateSinksAndSources = (sinks: Float64Array, sources: Float64Array): void => {
-    for (let i: number = 0; i < WIDTH * HEIGHT; i++) {
-        gamma[i] = (sinks[i] * halfDeltaT) / 2;
-        scaledSources[i] = sources[i] * halfDeltaT;
+    for (let idx: number = 0; idx < width * height; idx++) {
+        gamma[idx] = (sinks[idx] * dt) / 4.0;
+        q[idx] = (sources[idx] * dt) / 2.0;
     }
-}
+};
 ```
 
-## Updating the main diagonal for each sweep
+## Updating the main diagonal
 
-Because the sink term `gamma` varies in space, the main diagonal of the
-tridiagonal system must be rebuilt for every row (x‑sweep) or column
-(y‑sweep). Neumann (zero‑flux) boundary conditions are enforced by
-adjusting the first and last diagonal entries.
+Because $\gamma_{i,j}$ varies in space, the main diagonal must be rebuilt for every row (x-sweep) or column (y-sweep), before every Thomas-algorithm solve. As derived above, its formula is $1+2\lambda+\gamma_{i,j}$ at interior points but reduced to $1+\lambda+\gamma_{i,j}$ at both boundary points — one small helper, parameterized by how sweep-local index `k` maps to the flat grid index, serves both sweeps:
 
-```{.typescript #adi-update-diagonal-x}
-const updateMainDiagonalXstep = (yCoord: number): void => {
-    //update b1
-    for (let i: number = 0; i < WIDTH; i++) {
-        const idx: number = yCoord * WIDTH + i;
-        b1[i] = 1 + 2 * alpha + gamma[idx];
+```{.typescript #lst-adi-update-main-diagonal lst-cap="lst-adi-update-main-diagonal"}
+const updateMainDiagonal = (
+    main: Float64Array,
+    length: number,
+    indexAt: (k: number) => number,
+): void => {
+    for (let k: number = 0; k < length; k++) {
+        main[k] = 1.0 + 2.0 * lambda + gamma[indexAt(k)];
     }
-    //boundary conditions
-    b1[0] = 1 + alpha + gamma[yCoord * WIDTH + 0];
-    b1[WIDTH - 1] = 1 + alpha + gamma[yCoord * WIDTH + (WIDTH - 1)];
-}
+    main[0] = 1.0 + lambda + gamma[indexAt(0)];
+    main[length - 1] = 1.0 + lambda + gamma[indexAt(length - 1)];
+};
 ```
 
-```{.typescript #adi-update-diagonal-y}
-const updateMainDiagonalYstep = (xCoord: number): void => {
-    //update b2
-    for (let j: number = 0; j < HEIGHT; j++) {
-        const idx: number = j * WIDTH + xCoord;
-        b2[j] = 1 + 2 * alpha + gamma[idx];
+## The x-sweep
+
+For a fixed row $j$, the x-sweep solves implicitly for $U^{*}_{i,j}$ ($i=0,\ldots,\text{width}-1$) using the $y$-neighbors of the *previous* time level explicitly:
+
+$$
+-\lambda U^{*}_{i-1,j}
++ \left(1+2\lambda+\gamma_{i,j}\right) U^{*}_{i,j}
+- \lambda U^{*}_{i+1,j}
+=
+\lambda U^{n}_{i,j-1}
++ \left(1-2\lambda-\gamma_{i,j}\right) U^{n}_{i,j}
++ \lambda U^{n}_{i,j+1}
++ q_{i,j},
+$$ {#eq-adi-x-sweep}
+
+for interior rows $j=1,\ldots,\text{height}-2$. At the top and bottom boundaries ($j=0$ and $j=\text{height}-1$), the cell-centered Neumann condition (@eq-adi-ghost) gives $U^n_{i,-1}=U^n_{i,0}$ and $U^n_{i,\text{height}}=U^n_{i,\text{height}-1}$ — the ghost value equals the boundary cell's own value, not its interior neighbor's.
+
+```{.typescript #lst-adi-x-sweep lst-cap="lst-adi-x-sweep"}
+const xSweep = (concentration: Float64Array): void => {
+    for (let j: number = 0; j < height; j++) {
+        const jBelow: number = j > 0 ? j - 1 : 0;
+        const jAbove: number = j < height - 1 ? j + 1 : height - 1;
+        const rowOffset: number = j * width;
+
+        for (let i: number = 0; i < width; i++) {
+            const idx: number = rowOffset + i;
+            rhsX[i] =
+                lambda * concentration[jBelow * width + i] +
+                (1.0 - 2.0 * lambda - gamma[idx]) * concentration[idx] +
+                lambda * concentration[jAbove * width + i] +
+                q[idx];
+        }
+
+        updateMainDiagonal(mainX, width, (i) => rowOffset + i);
+
+        thomasAlgorithm(lowerX, mainX, upperX, rhsX, width, modifiedUpperX, solutionX);
+
+        for (let i: number = 0; i < width; i++) {
+            uStar[rowOffset + i] = solutionX[i];
+        }
     }
-    //boundary conditions
-    b2[0] = 1 + alpha + gamma[0 * WIDTH + xCoord];
-    b2[HEIGHT - 1] = 1 + alpha + gamma[(HEIGHT - 1) * WIDTH + xCoord];
-}
+};
 ```
 
-## The ADI time‑stepping loop
+## The y-sweep
 
-The main `ADI` function advances the concentration field by
-`totalNumberOfIterations` half‑time steps. Each full iteration consists of
-an x‑sweep followed by a y‑sweep. Clamped indexing (`jBelow = max(j-1,0)`,
-etc.) implements Neumann boundary conditions for the explicit part.
+The y-sweep is the mirror image of the x-sweep: for each fixed column $i$, it solves implicitly for $U^{n+1}_{i,j}$ using the $x$-neighbors of $U^{*}$ explicitly:
 
-If a negative concentration appears and `allowNegativeValues` is `false`,
-the function logs a warning and returns `null`.
+$$
+-\lambda U^{n+1}_{i,j-1}
++ \left(1+2\lambda+\gamma_{i,j}\right) U^{n+1}_{i,j}
+- \lambda U^{n+1}_{i,j+1}
+=
+\lambda U^{*}_{i-1,j}
++ \left(1-2\lambda-\gamma_{i,j}\right) U^{*}_{i,j}
++ \lambda U^{*}_{i+1,j}
++ q_{i,j},
+$$ {#eq-adi-y-sweep}
 
-```{.typescript #adi-main-function}
+with the same ghost-equals-boundary-cell condition at the left/right boundaries ($i=0$ and $i=\text{width}-1$). This sweep also checks for negative solutions, which callers may want to reject (see `ADI` below):
+
+```{.typescript #lst-adi-y-sweep lst-cap="lst-adi-y-sweep"}
+const ySweep = (concentration: Float64Array): boolean => {
+    let reachedNegativeValue: boolean = false;
+
+    for (let i: number = 0; i < width; i++) {
+        const iLeft: number = i > 0 ? i - 1 : 0;
+        const iRight: number = i < width - 1 ? i + 1 : width - 1;
+
+        for (let j: number = 0; j < height; j++) {
+            const rowOffset: number = j * width;
+            const idx: number = rowOffset + i;
+            rhsY[j] =
+                lambda * uStar[rowOffset + iLeft] +
+                (1.0 - 2.0 * lambda - gamma[idx]) * uStar[idx] +
+                lambda * uStar[rowOffset + iRight] +
+                q[idx];
+        }
+
+        updateMainDiagonal(mainY, height, (j) => j * width + i);
+
+        thomasAlgorithm(lowerY, mainY, upperY, rhsY, height, modifiedUpperY, solutionY);
+
+        for (let j: number = 0; j < height; j++) {
+            const pos: number = j * width + i;
+            if (solutionY[j] < 0) {
+                reachedNegativeValue = true;
+            }
+            concentration[pos] = solutionY[j];
+        }
+    }
+
+    return reachedNegativeValue;
+};
+```
+
+:::{.callout-note collapse=true title='Worked example for a $3\times3$ grid'}
+
+For `width = height = 3`, row $j=1$ is the only interior row, and its two neighbors $j=0$ and $j=2$ are themselves the real boundary rows (no ghost cells are needed in $y$ for this particular row). Writing $R_i = \lambda U^{n}_{i,0} + \left(1-2\lambda-\gamma_{i,1}\right) U^{n}_{i,1} + \lambda U^{n}_{i,2} + q_{i,1}$ for the explicit part, the x-sweep solves the $3\times3$ tridiagonal system
+
+$$
+\begin{aligned}
+\left(1+\lambda+\gamma_{0,1}\right) U^{*}_{0,1} - \lambda U^{*}_{1,1}
+&= R_0, \\
+-\lambda U^{*}_{0,1} + \left(1+2\lambda+\gamma_{1,1}\right) U^{*}_{1,1} - \lambda U^{*}_{2,1}
+&= R_1, \\
+-\lambda U^{*}_{1,1} + \left(1+\lambda+\gamma_{2,1}\right) U^{*}_{2,1}
+&= R_2.
+\end{aligned}
+$$
+
+The reduced main-diagonal entries at $i=0$ and $i=2$ (and the untouched off-diagonal entries next to them) are exactly the cell-centered Neumann boundary condition from @eq-adi-ghost, now applied along each row. The y-sweep then repeats the same pattern along columns, using $U^{*}$ in place of $U^n$.
+:::
+
+## The ADI time-stepping loop
+
+The exported `ADI` function advances the concentration field by `totalNumberOfIterations` full time steps, each consisting of one x-sweep followed by one y-sweep. If `allowNegativeValues` is `false` (the default) and any cell went negative during the y-sweep, the function warns and returns `null` instead of the (possibly unphysical) result:
+
+```{.typescript #lst-adi-main-function lst-cap="lst-adi-main-function"}
 export const ADI = (
     concentrationData: Float64Array,
     totalNumberOfIterations: number,
@@ -140,225 +362,24 @@ export const ADI = (
 ): Float64Array | null => {
     let reachedNegativeValue: boolean = false;
 
-    const currentConcentrationData: Float64Array = concentrationData;
-
     for (let iteration: number = 0; iteration < totalNumberOfIterations; iteration++) {
-        /////////////-----  FIRST HALF-STEP (X-sweep)  -----/////////////
-        // Solve implicitly in x, explicitly in y.
-        // Clamped indexing implements Neumann (zero-flux) BCs in y:
-        //   jBelow = max(j-1, 0),  jAbove = min(j+1, HEIGHT-1)
-        for (let j: number = 0; j < HEIGHT; j++) {
-            const jBelow: number = j > 0 ? j - 1 : 0;
-            const jAbove: number = j < HEIGHT - 1 ? j + 1 : HEIGHT - 1;
-            const rowOffset: number = j * WIDTH;
-
-            for (let i: number = 0; i < WIDTH; i++) {
-                const idx: number = rowOffset + i;
-
-                const center: number = currentConcentrationData[idx];
-                const bottom: number = currentConcentrationData[jBelow * WIDTH + i];
-                const top: number = currentConcentrationData[jAbove * WIDTH + i];
-
-                d1[i] =
-                    alpha * bottom +
-                    (1 - 2 * alpha - gamma[idx]) * center +
-                    alpha * top +
-                    scaledSources[idx];
-            }
-            updateMainDiagonalXstep(j);
-
-            thomasAlgorithm(
-                a1,
-                b1,
-                c1,
-                d1,
-                WIDTH,
-                modifiedUpperDiagonal1,
-                solution1,
-            );
-
-            for (let i: number = 0; i < WIDTH; i++) {
-                intermediateConcentration[rowOffset + i] = solution1[i];
-            }
-        }
-
-        /////////////-----  SECOND HALF-STEP (Y-sweep)  -----/////////////
-        // Solve implicitly in y, explicitly in x.
-        // Clamped indexing implements Neumann (zero-flux) BCs in x:
-        //   iLeft = max(i-1, 0),  iRight = min(i+1, WIDTH-1)
-        for (let i: number = 0; i < WIDTH; i++) {
-            const iLeft: number = i > 0 ? i - 1 : 0;
-            const iRight: number = i < WIDTH - 1 ? i + 1 : WIDTH - 1;
-
-            for (let j: number = 0; j < HEIGHT; j++) {
-                const rowOffset: number = j * WIDTH;
-                const idx: number = rowOffset + i;
-
-                const center: number = intermediateConcentration[idx];
-                const left: number = intermediateConcentration[rowOffset + iLeft];
-                const right: number = intermediateConcentration[rowOffset + iRight];
-
-                d2[j] =
-                    alpha * left +
-                    (1 - 2 * alpha - gamma[idx]) * center +
-                    alpha * right +
-                    scaledSources[idx];
-            }
-            updateMainDiagonalYstep(i);
-
-            thomasAlgorithm(
-                a2,
-                b2,
-                c2,
-                d2,
-                HEIGHT,
-                modifiedUpperDiagonal2,
-                solution2,
-            );
-
-            for (let j: number = 0; j < HEIGHT; j++) {
-                const pos: number = j * WIDTH + i;
-                if (solution2[j] < 0) {
-                    reachedNegativeValue = true;
-                }
-                currentConcentrationData[pos] = solution2[j];
-            }
-        }
+        xSweep(concentrationData);
+        reachedNegativeValue = ySweep(concentrationData) || reachedNegativeValue;
     }
 
     if (reachedNegativeValue && !allowNegativeValues) {
         console.warn("Concentration went negative at ADI");
         return null;
     }
-    return currentConcentrationData;
+
+    return concentrationData;
 };
 ```
 
-## Array initialisation helpers
+:::{.callout-note title="Initial condition"}
+As with `CNTimeStepping`, `concentrationData` must already hold the initial concentration profile $U^0_{i,j}$ before the first call to `ADI`; the module does not set or prescribe initial conditions.
+:::
 
-The `generateDiagonals` function creates the tridiagonal coefficient
-arrays for a single sweep. It fills the lower, main, and upper diagonals
-with the appropriate values and applies Neumann boundary conditions by
-adjusting the first and last entries.
+## Summary
 
-```{.typescript #adi-init-arrays}
-const generateDiagonals = (
-    length: number,
-    alpha: number,
-    gamma: number,
-): {
-    lowerDiagonal: Float64Array;
-    mainDiagonal: Float64Array;
-    upperDiagonal: Float64Array;
-    rightHandSide: Float64Array;
-} => {
-    const lowerDiagonal: Float64Array = new Float64Array(length).fill(-alpha);
-    const mainDiagonal: Float64Array = new Float64Array(length).fill(1 + 2 * alpha + gamma);
-    const upperDiagonal: Float64Array = new Float64Array(length).fill(-alpha);
-    const rightHandSide: Float64Array = new Float64Array(length);
-    mainDiagonal[0] = 1 + alpha + gamma;
-    mainDiagonal[length - 1] = 1 + alpha + gamma;
-    lowerDiagonal[0] = 0;
-    upperDiagonal[length - 1] = 0;
-    return { lowerDiagonal, mainDiagonal, upperDiagonal, rightHandSide };
-};
-```
-
-`initADIArrays` allocates all the working arrays needed by the ADI
-solver and pre‑computes the constant `alpha`. It returns an object with
-all the arrays and constants, which `setADIProperties` destructures into
-the module‑level variables.
-
-```{.typescript #adi-init-arrays}
-export const initADIArrays = (
-    WIDTH: number,
-    HEIGHT: number,
-    DIFFUSION_RATE: number,
-    deltaX: number,
-    deltaT: number,
-): {
-    modifiedUpperDiagonal1: Float64Array;
-    solution1: Float64Array;
-    modifiedUpperDiagonal2: Float64Array;
-    solution2: Float64Array;
-    intermediateConcentration: Float64Array;
-    a1: Float64Array;
-    b1: Float64Array;
-    c1: Float64Array;
-    d1: Float64Array;
-    a2: Float64Array;
-    b2: Float64Array;
-    c2: Float64Array;
-    d2: Float64Array;
-    alpha: number;
-    halfDeltaT: number;
-    scaledSources: Float64Array;
-    gamma: Float64Array;
-} => {
-    const modifiedUpperDiagonal1: Float64Array = new Float64Array(WIDTH);
-    const solution1: Float64Array = new Float64Array(WIDTH);
-    const modifiedUpperDiagonal2: Float64Array = new Float64Array(HEIGHT);
-    const solution2: Float64Array = new Float64Array(HEIGHT);
-    const intermediateConcentration: Float64Array = new Float64Array(WIDTH * HEIGHT);
-    const scaledSources: Float64Array = new Float64Array(WIDTH * HEIGHT);
-    const gamma: Float64Array = new Float64Array(WIDTH * HEIGHT).fill(0);
-
-    const alpha: number = (DIFFUSION_RATE * deltaT) / (2 * deltaX * deltaX);
-    const gammaPoint: number = 0;
-    const {
-        lowerDiagonal: a1,
-        mainDiagonal: b1,
-        upperDiagonal: c1,
-        rightHandSide: d1,
-    } = generateDiagonals(WIDTH, alpha, gammaPoint);
-    const {
-        lowerDiagonal: a2,
-        mainDiagonal: b2,
-        upperDiagonal: c2,
-        rightHandSide: d2,
-    } = generateDiagonals(HEIGHT, alpha, gammaPoint);
-    const halfDeltaT: number = deltaT / 2;
-return {
-        modifiedUpperDiagonal1,
-        solution1,
-        modifiedUpperDiagonal2,
-        solution2,
-        intermediateConcentration,
-        a1,
-        b1,
-        c1,
-        d1,
-        a2,
-        b2,
-        c2,
-        d2,
-        alpha,
-        halfDeltaT,
-        scaledSources,
-        gamma,
-    };
-};
-```
-
-## Assembling the module
-
-The final code block tells Entangled to write the file `src/adi.js` by
-concatenating all the pieces defined above:
-
-```{.typescript file=src/adi.ts}
-<<adi-imports>>
-
-<<adi-variables>>
-
-<<adi-set-properties>>
-
-<<adi-update-sinks-sources>>
-
-<<adi-update-diagonal-x>>
-
-<<adi-update-diagonal-y>>
-
-<<adi-main-function>>
-
-<<adi-init-arrays>>
-```
+In this chapter we derived an ADI solver for the two-dimensional diffusion--reaction equation, by splitting each time step into an x-sweep and a y-sweep, each a one-dimensional Crank--Nicolson half-step solved with the same Thomas algorithm used in the Crank--Nicolson chapter. Because this module uses a cell-centered grid rather than the Crank--Nicolson chapter's node-centered one, its Neumann boundary condition takes a different (but equally valid) form: the ghost cell equals the boundary cell itself, reducing the boundary main-diagonal coefficient rather than doubling the boundary off-diagonal one. The module `adi.ts` exposes three functions: `setADIProperties` to configure the solver, `updateSinksAndSources` to update the per-cell source/sink coefficients, and `ADI` to advance the concentration field in time.

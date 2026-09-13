@@ -75,7 +75,7 @@ test("Crank-Nicolson matches analytical decay of cos mode", () => {
 
     const u = new Float64Array(length);
     for (let i = 0; i < length; i++) {
-        u[i] = 0.5 + 0.5 * Math.cos(q * i);
+        u[i] = 0.5 + 0.5 * Math.cos(q * (i + 0.5));
     }
     const sourceCounts = new Float64Array(length).fill(0);
     const sinkCounts = new Float64Array(length).fill(1);
@@ -88,7 +88,7 @@ test("Crank-Nicolson matches analytical decay of cos mode", () => {
     for (let i = 0; i < length; i++) {
         const exact =
             0.5 * Math.exp(-k * totalTime) +
-            0.5 * Math.exp(-(D * q * q + k) * totalTime) * Math.cos(q * i);
+            0.5 * Math.exp(-(D * q * q + k) * totalTime) * Math.cos(q * (i + 0.5));
         expect(u[i]).toBeCloseTo(exact, 2);
     }
 });

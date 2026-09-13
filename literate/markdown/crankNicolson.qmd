@@ -521,11 +521,6 @@ U_i^{n+1} - U_i^n
 \end{aligned}
 $${#eq-row-i}
 
-:::{.callout-note title="Stability"}
-
-The Crank--Nicolson method is unconditionally stable for the pure diffusion equation. With the addition of the uptake term $-\beta_i (U_i^n + U_i^{n+1})$, the scheme remains stable provided the reaction time scale is not excessively small relative to $\Delta t$. In practice, for the parameter regimes typical of bacterial secretion and uptake, stability is not a concern.
-:::
-
 $\lambda$, $q$, and $\beta$ are declared as global variables in @lst-global-variables as
 
 ```{.typescript #lst-declare-lambda-q-beta lst-cap="lst-declare-lambda-q-beta"}
@@ -577,7 +572,7 @@ $$
 +q_i.
 $$ {#eq-crank-nicolson-tridiagonal}
 
-This equation applies to every interior grid cell $i=1,\ldots,N-2$, while the Neumann boundary condition is applied at the boundary cells $i=0$ and $i=N-1$. Because the grid is cell-centered, the zero-flux ghost value at each boundary equals the boundary cell's own value rather than its interior neighbor's — this reduces the boundary main-diagonal coefficient instead of doubling the boundary off-diagonal one, as derived in the next two sections. This way, for a spatial domain with $N$ grid cells, we obtain a system of $N$ linear equations. The system can be written in matrix form as
+This equation applies to every interior grid cell $i=1,\ldots,N-2$, while the Neumann boundary condition is applied at the boundary cells $i=0$ and $i=N-1$. Because the grid is cell-centered, the zero-flux ghost value at each boundary equals the boundary cell's own value. This way, for a spatial domain with $N$ grid cells, we obtain a system of $N$ linear equations. The system can be written in matrix form as
 
 $$
 A U^{n+1} = d
@@ -622,7 +617,9 @@ d =
 \end{bmatrix}.
 $$
 
-Here, the entries of $A$ and $d$ at the boundaries $i=0$ and $i=N-1$ incorporate Neumann (zero-flux) boundary conditions. The solution vector $U^{n+1}$ is solved from the system $A U^{n+1} = d$ using the Thomas algorithm, whose implementation lives in a separate module.
+Here, the entries of $A$ and $d$ at the boundaries $i=0$ and $i=N-1$ incorporate Neumann (zero-flux) boundary conditions. 
+
+The solution vector $U^{n+1}$ is solved from the system $A U^{n+1} = d$ using the Thomas algorithm, whose implementation lives in a separate module.
 
 
 
@@ -668,7 +665,7 @@ upperDiagonal[N - 1] = 0.0;
 
 ```
 
-Notice that we set the first element of the lower diagonal and the last element of the upper diagonal to zero, since the corresponding off-domain grid cells ($i=-1$ and $i=N$) lie outside the computational domain, while the off-diagonal entries pointing *into* the domain ($upperDiagonal[0]$, $lowerDiagonal[N-1]$) stay at the ordinary interior value $-\lambda$ — only the main diagonal is reduced at the boundary, per the cell-centered Neumann condition derived above.
+Notice that we set the first element of the lower diagonal and the last element of the upper diagonal to zero, since the corresponding off-domain grid cells ($i=-1$ and $i=N$) lie outside the computational domain.
 
 ## Building the right-hand side
 
