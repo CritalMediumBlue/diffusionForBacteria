@@ -117,10 +117,10 @@ drawGrid = (N,highlightCell) => {
         x: i + 0.5,
         indexLabel:
           N > 5 && i === N - 2
-            ? "N-2"
+            ? "i = N-2"
             : N > 5 && i === N - 1
-            ? "N-1"
-            : String(i)
+            ? "i = N-1"
+            : "i = "+String(i)
       };
     });
 
@@ -649,19 +649,17 @@ upperDiagonal = new Float64Array(N);
 and then filled with their corresponding parameter values in the same @lst-cn-set-parameters:
 
 ```{.typescript #lst-fill-diagonals lst-cap="lst-fill-diagonals"}
-for (let i: number = 1; i < N - 1; i++) {
-  lowerDiagonal[i] = -lambda;
-  mainDiagonal[i] = 1.0 + 2.0 * lambda + beta[i];
-  upperDiagonal[i] = -lambda;
-}
-
+lowerDiagonal.fill(-lambda)
 lowerDiagonal[0] = 0.0;
-mainDiagonal[0] = 1.0 + lambda + beta[0];
-upperDiagonal[0] = -lambda;
 
-lowerDiagonal[N - 1] = -lambda;
-mainDiagonal[N - 1] = 1.0 + lambda + beta[N - 1];
+upperDiagonal.fill(-lambda)
 upperDiagonal[N - 1] = 0.0;
+
+for (let i: number = 1; i < N - 1; i++) {
+  mainDiagonal[i] = 1.0 + 2.0 * lambda + beta[i];
+}
+mainDiagonal[0] = 1.0 + lambda + beta[0];
+mainDiagonal[N - 1] = 1.0 + lambda + beta[N - 1];
 
 ```
 

@@ -295,11 +295,10 @@ $$
 + q_{i,j},
 $$ {#eq-adi-y-sweep}
 
-with the same ghost-equals-boundary-cell condition at the left/right boundaries ($i=0$ and $i=\text{width}-1$). This sweep also checks for negative solutions, which callers may want to reject (see `ADI` below):
+with the same ghost-equals-boundary-cell condition at the left/right boundaries ($i=0$ and $i=\text{width}-1$). 
 
 ```{.typescript #lst-adi-y-sweep lst-cap="lst-adi-y-sweep"}
-const ySweep = (concentration: Float64Array): boolean => {
-    let reachedNegativeValue: boolean = false;
+const ySweep = (concentration: Float64Array) => {
 
     for (let i: number = 0; i < width; i++) {
         const iLeft: number = i > 0 ? i - 1 : 0;
@@ -321,14 +320,11 @@ const ySweep = (concentration: Float64Array): boolean => {
 
         for (let j: number = 0; j < height; j++) {
             const pos: number = j * width + i;
-            if (solutionY[j] < 0) {
-                reachedNegativeValue = true;
-            }
+           
             concentration[pos] = solutionY[j];
         }
     }
 
-    return reachedNegativeValue;
 };
 ```
 
@@ -352,25 +348,19 @@ The reduced main-diagonal entries at $i=0$ and $i=2$ (and the untouched off-diag
 
 ## The ADI time-stepping loop
 
-The exported `ADI` function advances the concentration field by `totalNumberOfIterations` full time steps, each consisting of one x-sweep followed by one y-sweep. If `allowNegativeValues` is `false` (the default) and any cell went negative during the y-sweep, the function warns and returns `null` instead of the (possibly unphysical) result:
+The exported `ADI` function advances the concentration field by `totalNumberOfIterations` full time steps, each consisting of one x-sweep followed by one y-sweep.
 
 ```{.typescript #lst-adi-main-function lst-cap="lst-adi-main-function"}
 export const ADI = (
     concentrationData: Float64Array,
     totalNumberOfIterations: number,
-    allowNegativeValues: boolean = false,
 ): Float64Array | null => {
-    let reachedNegativeValue: boolean = false;
 
     for (let iteration: number = 0; iteration < totalNumberOfIterations; iteration++) {
         xSweep(concentrationData);
-        reachedNegativeValue = ySweep(concentrationData) || reachedNegativeValue;
+        ySweep(concentrationData);
     }
 
-    if (reachedNegativeValue && !allowNegativeValues) {
-        console.warn("Concentration went negative at ADI");
-        return null;
-    }
 
     return concentrationData;
 };
