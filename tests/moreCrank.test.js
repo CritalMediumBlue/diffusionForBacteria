@@ -12,7 +12,9 @@ test("zero iterations leaves the field unchanged", () => {
     const D = 2,
         k = 0.01,
         dt = 0.1;
-    const u0 = new Float64Array(length).map((_, i) => Math.cos((2 * Math.PI * (i + 0.5) * deltaX) / L));
+    const u0 = new Float64Array(length).map((_, i) =>
+        Math.cos((2 * Math.PI * (i + 0.5) * deltaX) / L)
+    );
     const u = Float64Array.from(u0);
     const sourceCounts = new Float64Array(length).fill(0);
     const sinkCounts = new Float64Array(length).fill(1);
@@ -102,7 +104,8 @@ test("uniform field decays exponentially, independent of D", () => {
         const uniformDecay = Math.exp(-k * totalTime);
 
         for (let i = Math.floor(length * 0.2); i <= Math.floor(length * 0.8); i += 20) {
-            const expected = uniformDecay + decay * Math.cos((n * Math.PI * ((i + 0.5) * deltaX)) / L);
+            const expected =
+                uniformDecay + decay * Math.cos((n * Math.PI * ((i + 0.5) * deltaX)) / L);
             expect(u[i]).toBeCloseTo(expected, 2);
         }
     });
@@ -188,7 +191,9 @@ test("symmetric initial condition remains symmetric in time", () => {
     const D = 2,
         k = 0.01,
         dt = 0.1;
-    const u = new Float64Array(length).map((_, i) => 1 + Math.cos((2 * Math.PI * (i + 0.5) * deltaX) / L)); // symmetric about midpoint
+    const u = new Float64Array(length).map(
+        (_, i) => 1 + Math.cos((2 * Math.PI * (i + 0.5) * deltaX) / L)
+    ); // symmetric about midpoint
     const sourceCounts = new Float64Array(length).fill(0);
     const sinkCounts = new Float64Array(length).fill(1);
     const K_I = k * deltaX;
